@@ -204,7 +204,7 @@ export class ClubListComponent implements OnInit {
   loadClubs(): void {
     this.loading = true;
     this.clubService.getAll().subscribe({
-      next: (clubs) => {
+      next: (clubs: Club[]) => {
         this.clubs.set(clubs);
         this.loading = false;
       },

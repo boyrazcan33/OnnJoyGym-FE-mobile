@@ -1,4 +1,5 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core'; // PLATFORM_ID eklendi
+import { isPlatformBrowser } from '@angular/common'; // isPlatformBrowser eklendi
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
@@ -10,14 +11,18 @@ import { User } from '../../models/user.model';
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private platformId = inject(PLATFORM_ID); // Platform ID enjekte edildi
+  private isBrowser = isPlatformBrowser(this.platformId); // Tarayıcı olup olmadığı kontrol edildi
 
   isAuthenticated = signal(false);
   currentUser = signal<User | null>(null);
 
   constructor() {
-    const token = this.getToken();
-    if (token) {
-      this.isAuthenticated.set(true);
+    if (this.isBrowser) { // Yalnızca tarayıcı ortamında çalıştır
+      const token = this.getToken();
+      if (token) {
+        this.isAuthenticated.set(true);
+      }
     }
   }
 
@@ -32,15 +37,21 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    if (this.isBrowser) { // Yalnızca tarayıcı ortamında localStorage'a eriş
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
     this.isAuthenticated.set(false);
     this.currentUser.set(null);
     this.router.navigate(['/login']);
   }
 
   getToken(): string | null {
-    return localStorage.getItem('token');
+    if (this.isBrowser) { // Yalnızca tarayıcı ortamında localStorage'a eriş
+      // Not: Bu logic, önceki hatalı club.service.ts dosyasından alınan platform kontrolü ile birleştirilmiştir.
+      return localStorage.getItem('token');
+    }
+    return null;
   }
 
   isAdmin(): boolean {
@@ -49,18 +60,20 @@ export class AuthService {
   }
 
   private handleAuth(response: AuthResponse): void {
-    localStorage.setItem('token', response.token);
-    this.isAuthenticated.set(true);
+    if (this.isBrowser) { // Yalnızca tarayıcı ortamında localStorage'a eriş
+      localStorage.setItem('token', response.token);
+      this.isAuthenticated.set(true);
 
-    const user: User = {
-      id: 0,
-      email: response.email,
-      role: response.role,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+      const user: User = {
+        id: 0,
+        email: response.email,
+        role: response.role,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
 
-    localStorage.setItem('user', JSON.stringify(user));
-    this.currentUser.set(user);
+      localStorage.setItem('user', JSON.stringify(user));
+      this.currentUser.set(user);
+    }
   }
 }

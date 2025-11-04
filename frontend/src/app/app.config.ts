@@ -1,6 +1,6 @@
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors, withFetch } from '@angular/common/http'; // withFetch eklendi
 import { provideClientHydration } from '@angular/platform-browser';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 
@@ -13,6 +13,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideClientHydration(),
     provideAnimationsAsync(),
-    provideHttpClient(withInterceptors([authInterceptor]))
+    // withFetch() eklendi
+    provideHttpClient(withInterceptors([authInterceptor]), withFetch())
   ]
 };
