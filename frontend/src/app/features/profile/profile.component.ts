@@ -200,9 +200,12 @@ export class ProfileComponent implements OnInit {
 
     this.loading = true;
 
+    const formData = this.form.value;
     const data = {
-      ...this.form.value,
-      goals: this.form.value.goals?.join(',')
+      bio: formData.bio || undefined,
+      goals: formData.goals?.join(','),
+      experience: formData.experience || undefined,
+      gymPreference: formData.gymPreference || undefined
     };
 
     this.userService.updateProfile(user.id, data).subscribe({

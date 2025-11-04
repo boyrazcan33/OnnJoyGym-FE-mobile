@@ -1,3 +1,5 @@
+import { Gym } from './gym.model';
+
 export interface Review {
   id: number;
   gym: Gym;

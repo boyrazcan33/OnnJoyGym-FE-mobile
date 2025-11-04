@@ -1,3 +1,6 @@
+import { User } from './user.model';
+import { Gym } from './gym.model';
+
 export interface Video {
   id: number;
   user: User;
