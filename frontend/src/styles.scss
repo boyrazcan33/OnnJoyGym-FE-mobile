@@ -3,25 +3,26 @@
 // Include the common styles for Angular Material
 @include mat.core();
 
-// Define the palettes for your theme using the Material Design palettes
-$primary: mat.define-palette(mat.$deep-orange-palette, 500);
-$accent: mat.define-palette(mat.$blue-palette, 800);
-$warn: mat.define-palette(mat.$red-palette);
-
-// Create the theme object. A theme consists of configurations for individual
-// theming systems such as "color" or "typography".
-$theme: mat.define-light-theme((
+// Define the theme using the new M3 API
+$theme: mat.define-theme((
   color: (
-    primary: $primary,
-    accent: $accent,
-    warn: $warn,
+    theme-type: light,
+    primary: mat.$orange-palette,
+    tertiary: mat.$blue-palette,
   ),
-  typography: mat.define-typography-config(),
-  density: 0,
+  typography: (
+    brand-family: 'Roboto, sans-serif',
+    plain-family: 'Roboto, sans-serif',
+  ),
+  density: (
+    scale: 0,
+  )
 ));
 
-// Include theme styles for core and each component used in your app.
-@include mat.all-component-themes($theme);
+// Include theme styles for all components - wrapped in html selector for M3
+html {
+  @include mat.all-component-themes($theme);
+}
 
 // Global reset
 * {
