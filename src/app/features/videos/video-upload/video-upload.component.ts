@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -209,7 +209,7 @@ import { Gym } from '../../../models/gym.model';
     }
   `]
 })
-export class VideoUploadComponent {
+export class VideoUploadComponent implements OnInit {
   private fb = inject(FormBuilder);
   private http = inject(HttpClient);
   private videoService = inject(VideoService);
@@ -229,9 +229,87 @@ export class VideoUploadComponent {
     gymId: [null as number | null, Validators.required]
   });
 
-  constructor() {
+  ngOnInit(): void {
     this.loadGyms();
   }
 
   loadGyms(): void {
-    this.gymService.getAll
+    this.gymService.getAll().subscribe(gyms => this.gyms.set(gyms));
+  }
+
+  onFileSelected(event: any): void {
+    const file = event.target.files[0];
+    if (file) {
+      if (!file.type.includes('mp4')) {
+        this.snackBar.open('Only MP4 format is accepted', 'Close', { duration: 3000 });
+        return;
+      }
+      this.selectedFile.set(file);
+    }
+  }
+
+  getFileSize(): string {
+    const file = this.selectedFile();
+    if (!file) return '';
+    const mb = file.size / 1024 / 1024;
+    return `${mb.toFixed(2)} MB`;
+  }
+
+  onSubmit(): void {
+    if (this.form.invalid || !this.selectedFile()) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    const user = this.authService.currentUser();
+    if (!user) return;
+
+    this.uploading = true;
+
+    const uploadData = {
+      userId: user.id,
+      gymId: this.form.value.gymId!,
+      category: this.form.value.category!,
+      weight: this.form.value.weight!,
+      fileName: this.selectedFile()!.name,
+      reps: 3
+    };
+
+    // Step 1: Get pre-signed URL
+    this.videoService.getUploadUrl(uploadData).subscribe({
+      next: (response) => {
+        // Step 2: Upload to S3
+        this.uploadToS3(response.uploadUrl, this.selectedFile()!);
+      },
+      error: (err) => {
+        this.uploading = false;
+        this.snackBar.open(err.error?.message || 'Failed to get upload URL', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
+  private uploadToS3(url: string, file: File): void {
+    this.http.put(url, file, {
+      reportProgress: true,
+      observe: 'events',
+      headers: {
+        'Content-Type': 'video/mp4'
+      }
+    }).subscribe({
+      next: (event) => {
+        if (event.type === HttpEventType.UploadProgress) {
+          const progress = Math.round(100 * event.loaded / (event.total || 1));
+          this.uploadProgress.set(progress);
+        } else if (event.type === HttpEventType.Response) {
+          this.snackBar.open('Video uploaded successfully! Waiting for admin approval.', 'Close', { duration: 3000 });
+          this.router.navigate(['/dashboard']);
+        }
+      },
+      error: () => {
+        this.uploading = false;
+        this.uploadProgress.set(0);
+        this.snackBar.open('Upload failed', 'Close', { duration: 3000 });
+      }
+    });
+  }
+}
