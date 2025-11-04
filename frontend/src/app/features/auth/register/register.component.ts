@@ -35,10 +35,10 @@ import { AuthService } from '../../../core/services/auth.service';
             <mat-form-field appearance="outline">
               <mat-label>Email</mat-label>
               <input matInput type="email" formControlName="email" required>
-              @if (form.get('email')?.hasError('required') && form.get('email')?.touched) {
+              @if (form.get('email')!.hasError('required') && form.get('email')?.touched) {
                 <mat-error>Email is required</mat-error>
               }
-              @if (form.get('email')?.hasError('email')) {
+              @if (form.get('email')!.hasError('email')) {
                 <mat-error>Invalid email</mat-error>
               }
             </mat-form-field>
@@ -46,10 +46,10 @@ import { AuthService } from '../../../core/services/auth.service';
             <mat-form-field appearance="outline">
               <mat-label>Password</mat-label>
               <input matInput type="password" formControlName="password" required>
-              @if (form.get('password')?.hasError('required') && form.get('password')?.touched) {
+              @if (form.get('password')!.hasError('required') && form.get('password')?.touched) {
                 <mat-error>Password is required</mat-error>
               }
-              @if (form.get('password')?.hasError('minlength')) {
+              @if (form.get('password')!.hasError('minlength')) {
                 <mat-error>Password must be at least 6 characters</mat-error>
               }
             </mat-form-field>

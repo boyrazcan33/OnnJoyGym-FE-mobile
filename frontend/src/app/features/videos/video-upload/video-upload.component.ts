@@ -50,7 +50,7 @@ import { Gym } from '../../../models/gym.model';
                   <mat-option value="DEADLIFT">Deadlift</mat-option>
                   <mat-option value="PULL_UP">Pull Up</mat-option>
                 </mat-select>
-                @if (form.get('category')?.hasError('required') && form.get('category')?.touched) {
+                @if (form.get('category')!.hasError('required') && form.get('category')?.touched) {
                   <mat-error>Category is required</mat-error>
                 }
               </mat-form-field>
@@ -58,13 +58,13 @@ import { Gym } from '../../../models/gym.model';
               <mat-form-field appearance="outline">
                 <mat-label>Weight (kg)</mat-label>
                 <input matInput type="number" formControlName="weight" required min="1" max="500">
-                @if (form.get('weight')?.hasError('required') && form.get('weight')?.touched) {
+                @if (form.get('weight')!.hasError('required') && form.get('weight')?.touched) {
                   <mat-error>Weight is required</mat-error>
                 }
-                @if (form.get('weight')?.hasError('min')) {
+                @if (form.get('weight')!.hasError('min')) {
                   <mat-error>Weight must be at least 1 kg</mat-error>
                 }
-                @if (form.get('weight')?.hasError('max')) {
+                @if (form.get('weight')!.hasError('max')) {
                   <mat-error>Weight cannot exceed 500 kg</mat-error>
                 }
               </mat-form-field>
@@ -76,7 +76,7 @@ import { Gym } from '../../../models/gym.model';
                     <mat-option [value]="gym.id">{{ gym.name }}</mat-option>
                   }
                 </mat-select>
-                @if (form.get('gymId')?.hasError('required') && form.get('gymId')?.touched) {
+                @if (form.get('gymId')!.hasError('required') && form.get('gymId')?.touched) {
                   <mat-error>Gym is required</mat-error>
                 }
               </mat-form-field>
