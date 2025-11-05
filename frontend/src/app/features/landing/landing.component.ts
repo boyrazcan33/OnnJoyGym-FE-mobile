@@ -16,8 +16,18 @@ import { MatCardModule } from '@angular/material/card';
           <h1>Find Your Perfect Gym & Training Partner</h1>
           <p>Expert gym reviews, buddy matching, competitions, and personalized workout programs.</p>
           <div class="hero-actions">
-            <button mat-raised-button color="primary" routerLink="/register">Get Started</button>
-            <button mat-stroked-button routerLink="/gyms">Browse Gyms</button>
+            <button mat-raised-button color="primary" routerLink="/register">
+              <mat-icon>person_add</mat-icon>
+              Sign Up
+            </button>
+            <button mat-raised-button color="accent" routerLink="/login">
+              <mat-icon>login</mat-icon>
+              Login
+            </button>
+            <button mat-stroked-button routerLink="/gyms">
+              <mat-icon>fitness_center</mat-icon>
+              Browse Gyms
+            </button>
           </div>
         </div>
       </section>
@@ -53,11 +63,86 @@ import { MatCardModule } from '@angular/material/card';
         </div>
       </section>
 
+      <section class="features">
+        <div class="container">
+          <h2>Why Choose OnnJoyGym?</h2>
+          <div class="features-grid">
+            <div class="feature-item">
+              <mat-icon>verified</mat-icon>
+              <h4>Verified Reviews</h4>
+              <p>All gym reviews are written by certified fitness professionals</p>
+            </div>
+
+            <div class="feature-item">
+              <mat-icon>psychology</mat-icon>
+              <h4>Smart Matching</h4>
+              <p>AI-powered algorithm finds your perfect training partner</p>
+            </div>
+
+            <div class="feature-item">
+              <mat-icon>leaderboard</mat-icon>
+              <h4>Real Competition</h4>
+              <p>Video-verified lifts ensure fair and honest competition</p>
+            </div>
+
+            <div class="feature-item">
+              <mat-icon>trending_up</mat-icon>
+              <h4>Track Progress</h4>
+              <p>Monitor your weekly progress through club programs</p>
+            </div>
+
+            <div class="feature-item">
+              <mat-icon>telegram</mat-icon>
+              <h4>Direct Contact</h4>
+              <p>Connect with buddies via Telegram instantly</p>
+            </div>
+
+            <div class="feature-item">
+              <mat-icon>location_on</mat-icon>
+              <h4>Local Focus</h4>
+              <p>Find gyms and partners in your area</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats">
+        <div class="container">
+          <div class="stats-grid">
+            <div class="stat-item">
+              <h3>100+</h3>
+              <p>Active Users</p>
+            </div>
+            <div class="stat-item">
+              <h3>10+</h3>
+              <p>Partner Gyms</p>
+            </div>
+            <div class="stat-item">
+              <h3>50+</h3>
+              <p>Training Matches</p>
+            </div>
+            <div class="stat-item">
+              <h3>200+</h3>
+              <p>Videos Uploaded</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="cta">
         <div class="container cta-content">
           <h2>Ready to Transform Your Training?</h2>
-          <p>Join hundreds of athletes in Estonia's fitness community</p>
-          <button mat-raised-button color="primary" routerLink="/register">Join Now</button>
+          <p>Join hundreds of athletes in Estonia's premier fitness community</p>
+          <div class="cta-buttons">
+            <button mat-raised-button color="primary" routerLink="/register">
+              <mat-icon>rocket_launch</mat-icon>
+              Get Started Free
+            </button>
+            <button mat-stroked-button routerLink="/leaderboard">
+              <mat-icon>emoji_events</mat-icon>
+              View Leaderboard
+            </button>
+          </div>
         </div>
       </section>
     </div>
@@ -88,10 +173,20 @@ import { MatCardModule } from '@angular/material/card';
       display: flex;
       gap: 1rem;
       justify-content: center;
+      flex-wrap: wrap;
 
       button {
         padding: 0.75rem 2rem;
         font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        mat-icon {
+          font-size: 1.25rem;
+          width: 1.25rem;
+          height: 1.25rem;
+        }
       }
     }
 
@@ -141,8 +236,86 @@ import { MatCardModule } from '@angular/material/card';
       }
     }
 
+    .features {
+      padding: 4rem 0;
+      background: var(--light);
+
+      h2 {
+        text-align: center;
+        font-size: 2.5rem;
+        margin-bottom: 3rem;
+        color: var(--dark);
+      }
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+
+    .feature-item {
+      display: flex;
+      gap: 1rem;
+      padding: 1.5rem;
+      background: white;
+      border-radius: 8px;
+      transition: transform 0.3s;
+
+      &:hover {
+        transform: translateX(8px);
+      }
+
+      mat-icon {
+        font-size: 2.5rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        color: var(--primary);
+        flex-shrink: 0;
+      }
+
+      h4 {
+        margin: 0 0 0.5rem 0;
+        color: var(--dark);
+      }
+
+      p {
+        margin: 0;
+        color: #666;
+        font-size: 0.875rem;
+      }
+    }
+
+    .stats {
+      padding: 4rem 0;
+      background: var(--secondary);
+      color: white;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 2rem;
+    }
+
+    .stat-item {
+      text-align: center;
+
+      h3 {
+        font-size: 3rem;
+        margin-bottom: 0.5rem;
+        color: var(--primary);
+        font-weight: bold;
+      }
+
+      p {
+        font-size: 1.125rem;
+        color: rgba(255,255,255,0.9);
+      }
+    }
+
     .cta {
-      background: var(--primary);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
       color: white;
       padding: 4rem 0;
       text-align: center;
@@ -156,12 +329,40 @@ import { MatCardModule } from '@angular/material/card';
         font-size: 1.25rem;
         margin-bottom: 2rem;
       }
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
 
       button {
-        background: white;
-        color: var(--primary);
         padding: 0.75rem 2rem;
         font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        mat-icon {
+          font-size: 1.25rem;
+          width: 1.25rem;
+          height: 1.25rem;
+        }
+
+        &[color="primary"] {
+          background: white;
+          color: var(--primary);
+        }
+
+        &[mat-stroked-button] {
+          border-color: white;
+          color: white;
+
+          &:hover {
+            background: rgba(255,255,255,0.1);
+          }
+        }
       }
     }
 
@@ -180,8 +381,26 @@ import { MatCardModule } from '@angular/material/card';
         }
       }
 
-      .pillars h2, .cta h2 {
+      .pillars h2, .features h2, .cta h2 {
         font-size: 2rem;
+      }
+
+      .pillar-grid, .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .cta-buttons {
+        flex-direction: column;
+        align-items: center;
+
+        button {
+          width: 100%;
+          max-width: 300px;
+        }
       }
     }
   `]

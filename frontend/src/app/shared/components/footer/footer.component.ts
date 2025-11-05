@@ -31,8 +31,8 @@ import { RouterLink } from '@angular/router';
 
           <div class="link-group">
             <h4>Contact</h4>
-            <a href="https://discord.gg/onjoygym" target="_blank">Discord</a>
             <a href="mailto:info@onjoygym.ee">Email</a>
+            <a href="tel:+372XXXXXXXX">Phone</a>
           </div>
         </div>
       </div>

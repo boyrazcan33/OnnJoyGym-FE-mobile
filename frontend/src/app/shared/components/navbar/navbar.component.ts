@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -28,21 +28,16 @@ import { AuthService } from '../../../core/services/auth.service';
           <span class="logo-text">💪 OnnJoyGym</span>
         </a>
 
-        <nav class="nav-links desktop-only">
-          <a routerLink="/gyms" routerLinkActive="active">Gyms</a>
-          <a routerLink="/leaderboard" routerLinkActive="active">Leaderboard</a>
-          @if (authService.isAuthenticated()) {
+        @if (authService.isAuthenticated()) {
+          <nav class="nav-links desktop-only">
+            <a routerLink="/gyms" routerLinkActive="active">Gyms</a>
+            <a routerLink="/leaderboard" routerLinkActive="active">Leaderboard</a>
             <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
             <a routerLink="/buddies" routerLinkActive="active">Buddies</a>
             <a routerLink="/clubs" routerLinkActive="active">Clubs</a>
-          }
-        </nav>
+          </nav>
 
-        <div class="nav-actions">
-          @if (!authService.isAuthenticated()) {
-            <button mat-button routerLink="/login">Login</button>
-            <button mat-raised-button color="primary" routerLink="/register">Sign Up</button>
-          } @else {
+          <div class="nav-actions">
             <button mat-icon-button [matMenuTriggerFor]="menu">
               <div class="avatar">{{ getInitials() }}</div>
             </button>
@@ -67,8 +62,8 @@ import { AuthService } from '../../../core/services/auth.service';
                 <span>Logout</span>
               </button>
             </mat-menu>
-          }
-        </div>
+          </div>
+        }
       </div>
     </mat-toolbar>
   `,
@@ -150,7 +145,6 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class NavbarComponent {
   authService = inject(AuthService);
-  private router = inject(Router);
 
   getInitials(): string {
     const user = this.authService.currentUser();

@@ -60,7 +60,7 @@ export class AuthService {
   }
 
   private handleAuth(response: AuthResponse): void {
-    if (this.isBrowser) { // Yalnızca tarayıcı ortamında localStorage'a eriş
+    if (this.isBrowser) {
       localStorage.setItem('token', response.token);
       this.isAuthenticated.set(true);
 
@@ -68,6 +68,7 @@ export class AuthService {
         id: 0,
         email: response.email,
         role: response.role,
+        isActivated: false, // Varsayılan değer
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };

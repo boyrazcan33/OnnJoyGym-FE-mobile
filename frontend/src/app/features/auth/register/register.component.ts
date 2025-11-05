@@ -35,10 +35,10 @@ import { AuthService } from '../../../core/services/auth.service';
             <mat-form-field appearance="outline">
               <mat-label>Email</mat-label>
               <input matInput type="email" formControlName="email" required>
-              @if (form.get('email')!.hasError('required') && form.get('email')?.touched) {
+              @if (emailControl.hasError('required') && emailControl.touched) {
                 <mat-error>Email is required</mat-error>
               }
-              @if (form.get('email')!.hasError('email')) {
+              @if (emailControl.hasError('email') && !emailControl.hasError('required')) {
                 <mat-error>Invalid email</mat-error>
               }
             </mat-form-field>
@@ -46,11 +46,23 @@ import { AuthService } from '../../../core/services/auth.service';
             <mat-form-field appearance="outline">
               <mat-label>Password</mat-label>
               <input matInput type="password" formControlName="password" required>
-              @if (form.get('password')!.hasError('required') && form.get('password')?.touched) {
+              @if (passwordControl.hasError('required') && passwordControl.touched) {
                 <mat-error>Password is required</mat-error>
               }
-              @if (form.get('password')!.hasError('minlength')) {
+              @if (passwordControl.hasError('minlength') && !passwordControl.hasError('required')) {
                 <mat-error>Password must be at least 6 characters</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Telegram Username</mat-label>
+              <input matInput formControlName="telegramUsername" placeholder="{{ getPlaceholder() }}" required>
+              <mat-hint>{{ getHint() }}</mat-hint>
+              @if (telegramControl.hasError('required') && telegramControl.touched) {
+                <mat-error>Telegram username is required</mat-error>
+              }
+              @if (telegramControl.hasError('pattern') && !telegramControl.hasError('required')) {
+                <mat-error>Must start with {{ getAtSymbol() }} and be 5-32 characters</mat-error>
               }
             </mat-form-field>
 
@@ -127,8 +139,33 @@ export class RegisterComponent {
 
   form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]]
+    password: ['', [Validators.required, Validators.minLength(6)]],
+    telegramUsername: ['', [Validators.required, Validators.pattern(/^@[a-zA-Z0-9_]{5,32}$/)]]
   });
+
+  get emailControl() {
+    return this.form.controls.email;
+  }
+
+  get passwordControl() {
+    return this.form.controls.password;
+  }
+
+  get telegramControl() {
+    return this.form.controls.telegramUsername;
+  }
+
+  getPlaceholder(): string {
+    return '@username';
+  }
+
+  getHint(): string {
+    return 'Start with @ (e.g., @john_doe)';
+  }
+
+  getAtSymbol(): string {
+    return '@';
+  }
 
   onSubmit(): void {
     if (this.form.invalid) {
@@ -138,7 +175,13 @@ export class RegisterComponent {
 
     this.loading = true;
 
-    this.authService.register(this.form.value as any).subscribe({
+    const registerData = {
+      email: this.form.value.email!,
+      password: this.form.value.password!,
+      telegramUsername: this.form.value.telegramUsername!
+    };
+
+    this.authService.register(registerData).subscribe({
       next: () => {
         this.snackBar.open('Account created successfully!', 'Close', { duration: 3000 });
         this.router.navigate(['/dashboard']);

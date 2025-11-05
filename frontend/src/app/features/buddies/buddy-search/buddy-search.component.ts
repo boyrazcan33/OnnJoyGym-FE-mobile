@@ -1,135 +1,319 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { UserService } from '../../../core/services/user.service';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatBadgeModule } from '@angular/material/badge';
+import { BuddyMatchingService } from '../../../core/services/buddy-matching.service';
 import { GymService } from '../../../core/services/gym.service';
-import { User } from '../../../models/user.model';
+import { AuthService } from '../../../core/services/auth.service';
+import { BuddyMatchResponse, BuddyRequestResponse } from '../../../models/buddy-match.model';
 import { Gym } from '../../../models/gym.model';
-import { BuddyProfileModalComponent } from '../buddy-profile-modal/buddy-profile-modal.component';
 
 @Component({
   selector: 'app-buddy-search',
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule,
+    RouterLink,
     MatCardModule,
-    MatFormFieldModule,
-    MatSelectModule,
     MatButtonModule,
     MatIconModule,
     MatChipsModule,
-    MatDialogModule
+    MatDialogModule,
+    MatTabsModule,
+    MatBadgeModule
   ],
   template: `
     <div class="buddy-search">
       <div class="container">
         <div class="page-header">
-          <h1>Find Training Buddies</h1>
-          <p>Connect with athletes who share your goals</p>
+          <h1>Training Buddies</h1>
+          <p>Find your perfect training partner based on compatibility</p>
         </div>
 
-        <div class="search-layout">
-          <mat-card class="filters-card">
-            <h3>Filters</h3>
-            <form [formGroup]="filterForm">
-              <mat-form-field appearance="outline">
-                <mat-label>Gym</mat-label>
-                <mat-select formControlName="gymId">
-                  <mat-option [value]="null">All Gyms</mat-option>
-                  @for (gym of gyms(); track gym.id) {
-                    <mat-option [value]="gym.id">{{ gym.name }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+        <mat-tab-group [(selectedIndex)]="selectedTab" (selectedIndexChange)="onTabChange($event)">
+          <!-- Tab 1: Matches -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>person_search</mat-icon>
+              <span>Find Matches</span>
+            </ng-template>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Goal</mat-label>
-                <mat-select formControlName="goal">
-                  <mat-option [value]="null">All Goals</mat-option>
-                  <mat-option value="STRENGTH">Strength</mat-option>
-                  <mat-option value="HYPERTROPHY">Hypertrophy</mat-option>
-                  <mat-option value="ENDURANCE">Endurance</mat-option>
-                  <mat-option value="WEIGHT_LOSS">Weight Loss</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Experience</mat-label>
-                <mat-select formControlName="experience">
-                  <mat-option [value]="null">All Levels</mat-option>
-                  <mat-option value="BEGINNER">Beginner</mat-option>
-                  <mat-option value="INTERMEDIATE">Intermediate</mat-option>
-                  <mat-option value="ADVANCED">Advanced</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <button mat-raised-button color="primary" (click)="search()">
-                <mat-icon>search</mat-icon>
-                Apply Filters
-              </button>
-            </form>
-          </mat-card>
-
-          <div class="results">
-            @if (loading) {
-              <div class="loading">Searching...</div>
-            } @else {
-              <div class="buddy-grid">
-                @for (user of users(); track user.id) {
-                  <mat-card class="buddy-card">
-                    <div class="buddy-avatar">{{ getInitials(user) }}</div>
-                    <h3>{{ getUserName(user) }}</h3>
-
-                    @if (user.gymPreference) {
-                      <p class="gym-info">
-                        <mat-icon>fitness_center</mat-icon>
-                        {{ getGymName(user.gymPreference) }}
-                      </p>
-                    }
-
-                    @if (user.goals) {
-                      <div class="goal-chips">
-                        @for (goal of user.goals.split(','); track goal) {
-                          <mat-chip>{{ goal }}</mat-chip>
-                        }
+            <div class="tab-content">
+              @if (!userActivated()) {
+                <mat-card class="activation-notice">
+                  <mat-card-content>
+                    <mat-icon>info</mat-icon>
+                    <div>
+                      <h3>Complete Your Profile First</h3>
+                      <p>To find training buddies, you need to set your preferences or upload a video.</p>
+                      <div class="action-buttons">
+                        <button mat-raised-button color="primary" routerLink="/buddies/preferences">
+                          Set Preferences
+                        </button>
+                        <button mat-button routerLink="/videos/upload">
+                          Upload Video
+                        </button>
                       </div>
-                    }
+                    </div>
+                  </mat-card-content>
+                </mat-card>
+              } @else {
+                @if (loadingMatches) {
+                  <div class="loading">Finding your perfect matches...</div>
+                } @else {
+                  @if (matches().length > 0) {
+                    <div class="buddy-grid">
+                      @for (match of matches(); track match.userId) {
+                        <mat-card class="buddy-card" [class.connected]="match.isConnected">
+                          @if (match.isConnected) {
+                            <div class="connected-badge">
+                              <mat-icon>check_circle</mat-icon>
+                              Connected
+                            </div>
+                          }
 
-                    @if (user.experience) {
-                      <p class="experience">
-                        <mat-icon>bar_chart</mat-icon>
-                        {{ user.experience }}
-                      </p>
-                    }
+                          <div class="match-score">
+                            <div class="score-circle" [class]="getScoreClass(match.matchScore)">
+                              {{ match.matchScore }}%
+                            </div>
+                          </div>
 
-                    <div class="buddy-actions">
-                      <button mat-button color="primary" (click)="viewProfile(user)">
-                        View Profile
-                      </button>
-                      <button mat-icon-button (click)="toggleSave(user)" [class.saved]="isSaved(user.id)">
-                        <mat-icon>{{ isSaved(user.id) ? 'star' : 'star_border' }}</mat-icon>
+                          <div class="buddy-info">
+                            <h3>Training Partner</h3>
+
+                            <div class="info-row">
+                              <mat-icon>flag</mat-icon>
+                              <span>{{ formatField(match.trainingGoal) }}</span>
+                            </div>
+
+                            <div class="info-row">
+                              <mat-icon>person</mat-icon>
+                              <span>{{ formatField(match.gender) }}</span>
+                            </div>
+
+                            <div class="info-row">
+                              <mat-icon>psychology</mat-icon>
+                              <span>{{ formatField(match.socialBehavior) }}</span>
+                            </div>
+
+                            <div class="info-row">
+                              <mat-icon>cake</mat-icon>
+                              <span>{{ match.ageRange }}</span>
+                            </div>
+
+                            @if (match.commonGyms.length > 0) {
+                              <div class="common-section">
+                                <h4>Common Gyms</h4>
+                                <div class="chips">
+                                  @for (gymId of match.commonGyms; track gymId) {
+                                    <mat-chip>{{ getGymName(gymId) }}</mat-chip>
+                                  }
+                                </div>
+                              </div>
+                            }
+
+                            @if (match.commonTimeSlots.length > 0) {
+                              <div class="common-section">
+                                <h4>Common Schedule</h4>
+                                <div class="chips">
+                                  @for (slot of match.commonTimeSlots; track slot) {
+                                    <mat-chip>{{ formatTimeSlot(slot) }}</mat-chip>
+                                  }
+                                </div>
+                              </div>
+                            }
+
+                            @if (match.isConnected && match.telegramUsername) {
+                              <div class="telegram-info">
+                                <mat-icon>telegram</mat-icon>
+                                <a [href]="'https://t.me/' + match.telegramUsername.substring(1)" target="_blank">
+                                  {{ match.telegramUsername }}
+                                </a>
+                              </div>
+                            }
+                          </div>
+
+                          <mat-card-actions>
+                            @if (!match.isConnected) {
+                              <button mat-raised-button color="primary"
+                                      (click)="sendBuddyRequest(match.userId)"
+                                      [disabled]="sendingRequest === match.userId">
+                                <mat-icon>person_add</mat-icon>
+                                {{ sendingRequest === match.userId ? 'Sending...' : 'Send Request' }}
+                              </button>
+                            } @else {
+                              <button mat-button disabled>
+                                <mat-icon>check</mat-icon>
+                                Already Connected
+                              </button>
+                            }
+                          </mat-card-actions>
+                        </mat-card>
+                      }
+                    </div>
+                  } @else {
+                    <div class="empty-state">
+                      <mat-icon>search_off</mat-icon>
+                      <p>No matches found with score above 50%.</p>
+                      <button mat-raised-button color="primary" routerLink="/buddies/preferences">
+                        Update Preferences
                       </button>
                     </div>
-                  </mat-card>
-                } @empty {
+                  }
+                }
+              }
+            </div>
+          </mat-tab>
+
+          <!-- Tab 2: Received Requests -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon [matBadge]="receivedRequests().length"
+                        [matBadgeHidden]="receivedRequests().length === 0"
+                        matBadgeColor="warn">inbox</mat-icon>
+              <span>Received ({{ receivedRequests().length }})</span>
+            </ng-template>
+
+            <div class="tab-content">
+              @if (loadingRequests) {
+                <div class="loading">Loading requests...</div>
+              } @else {
+                @if (receivedRequests().length > 0) {
+                  <div class="requests-list">
+                    @for (request of receivedRequests(); track request.requestId) {
+                      <mat-card class="request-card">
+                        <mat-card-content>
+                          <div class="request-info">
+                            <div class="avatar">{{ getInitials(request.senderEmail) }}</div>
+                            <div>
+                              <h4>{{ getUserName(request.senderEmail) }}</h4>
+                              <p class="email">{{ request.senderEmail }}</p>
+                              <p class="date">{{ request.createdAt | date:'MMM dd, yyyy HH:mm' }}</p>
+                            </div>
+                          </div>
+                        </mat-card-content>
+                        <mat-card-actions>
+                          <button mat-raised-button color="primary"
+                                  (click)="acceptRequest(request.requestId)"
+                                  [disabled]="processingRequest === request.requestId">
+                            <mat-icon>check</mat-icon>
+                            Accept
+                          </button>
+                          <button mat-button color="warn"
+                                  (click)="rejectRequest(request.requestId)"
+                                  [disabled]="processingRequest === request.requestId">
+                            <mat-icon>close</mat-icon>
+                            Reject
+                          </button>
+                        </mat-card-actions>
+                      </mat-card>
+                    }
+                  </div>
+                } @else {
                   <div class="empty-state">
-                    <mat-icon>person_search</mat-icon>
-                    <p>No buddies found. Try adjusting your filters.</p>
+                    <mat-icon>inbox</mat-icon>
+                    <p>No pending requests</p>
                   </div>
                 }
-              </div>
-            }
-          </div>
-        </div>
+              }
+            </div>
+          </mat-tab>
+
+          <!-- Tab 3: Sent Requests -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>send</mat-icon>
+              <span>Sent ({{ sentRequests().length }})</span>
+            </ng-template>
+
+            <div class="tab-content">
+              @if (loadingRequests) {
+                <div class="loading">Loading requests...</div>
+              } @else {
+                @if (sentRequests().length > 0) {
+                  <div class="requests-list">
+                    @for (request of sentRequests(); track request.requestId) {
+                      <mat-card class="request-card">
+                        <mat-card-content>
+                          <div class="request-info">
+                            <div class="avatar">{{ getInitials(request.senderEmail) }}</div>
+                            <div>
+                              <h4>{{ getUserName(request.senderEmail) }}</h4>
+                              <p class="email">{{ request.senderEmail }}</p>
+                              <p class="date">{{ request.createdAt | date:'MMM dd, yyyy HH:mm' }}</p>
+                              <mat-chip [class]="'status-' + request.status.toLowerCase()">
+                                {{ request.status }}
+                              </mat-chip>
+                            </div>
+                          </div>
+                        </mat-card-content>
+                      </mat-card>
+                    }
+                  </div>
+                } @else {
+                  <div class="empty-state">
+                    <mat-icon>send</mat-icon>
+                    <p>No sent requests</p>
+                  </div>
+                }
+              }
+            </div>
+          </mat-tab>
+
+          <!-- Tab 4: Connections -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>group</mat-icon>
+              <span>Connections ({{ connections().length }})</span>
+            </ng-template>
+
+            <div class="tab-content">
+              @if (loadingRequests) {
+                <div class="loading">Loading connections...</div>
+              } @else {
+                @if (connections().length > 0) {
+                  <div class="connections-grid">
+                    @for (connection of connections(); track connection.requestId) {
+                      <mat-card class="connection-card">
+                        <div class="avatar-large">{{ getInitials(connection.senderEmail) }}</div>
+                        <h3>{{ getUserName(connection.senderEmail) }}</h3>
+                        <p class="email">{{ connection.senderEmail }}</p>
+
+                        @if (connection.telegramUsername) {
+                          <div class="telegram-contact">
+                            <mat-icon>telegram</mat-icon>
+                            <a [href]="'https://t.me/' + connection.telegramUsername.substring(1)" target="_blank">
+                              {{ connection.telegramUsername }}
+                            </a>
+                          </div>
+                        }
+
+                        <p class="connected-date">
+                          Connected: {{ connection.createdAt | date:'MMM dd, yyyy' }}
+                        </p>
+                      </mat-card>
+                    }
+                  </div>
+                } @else {
+                  <div class="empty-state">
+                    <mat-icon>group</mat-icon>
+                    <p>No connections yet</p>
+                    <button mat-raised-button color="primary" (click)="selectedTab = 0">
+                      Find Matches
+                    </button>
+                  </div>
+                }
+              }
+            </div>
+          </mat-tab>
+        </mat-tab-group>
       </div>
     </div>
   `,
@@ -155,81 +339,79 @@ import { BuddyProfileModalComponent } from '../buddy-profile-modal/buddy-profile
       }
     }
 
-    .search-layout {
-      display: grid;
-      grid-template-columns: 300px 1fr;
-      gap: 2rem;
+    .tab-content {
+      padding: 2rem 0;
     }
 
-    .filters-card {
-      padding: 1.5rem;
-      height: fit-content;
-      position: sticky;
-      top: 80px;
+    .activation-notice {
+      text-align: center;
+      padding: 2rem;
+      background: linear-gradient(135deg, #fff3cd 0%, #fff9e6 100%);
 
-      h3 {
-        margin-bottom: 1rem;
-      }
-
-      form {
+      mat-card-content {
         display: flex;
         flex-direction: column;
+        align-items: center;
         gap: 1rem;
-      }
 
-      mat-form-field {
-        width: 100%;
-      }
+        mat-icon {
+          font-size: 3rem;
+          width: 3rem;
+          height: 3rem;
+          color: #856404;
+        }
 
-      button {
-        width: 100%;
+        h3 {
+          margin: 0;
+          color: #856404;
+        }
+
+        p {
+          margin: 0;
+          color: #856404;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 1rem;
+          margin-top: 1rem;
+        }
       }
     }
 
     .buddy-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
       gap: 1.5rem;
     }
 
     .buddy-card {
-      padding: 1.5rem;
-      text-align: center;
+      position: relative;
       transition: transform 0.3s, box-shadow 0.3s;
 
       &:hover {
         transform: translateY(-4px);
         box-shadow: 0 8px 24px rgba(0,0,0,0.15);
       }
+
+      &.connected {
+        border: 2px solid var(--success);
+      }
     }
 
-    .buddy-avatar {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      background: var(--primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      font-weight: bold;
+    .connected-badge {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: var(--success);
       color: white;
-      margin: 0 auto 1rem;
-    }
-
-    h3 {
-      margin-bottom: 0.5rem;
-      color: var(--dark);
-    }
-
-    .gym-info, .experience {
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 0.25rem;
-      color: #666;
+      gap: 0.5rem;
       font-size: 0.875rem;
-      margin-bottom: 0.5rem;
+      font-weight: 500;
 
       mat-icon {
         font-size: 1rem;
@@ -238,22 +420,234 @@ import { BuddyProfileModalComponent } from '../buddy-profile-modal/buddy-profile
       }
     }
 
-    .goal-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      justify-content: center;
+    .match-score {
+      text-align: center;
       margin: 1rem 0;
     }
 
-    .buddy-actions {
-      display: flex;
-      justify-content: space-between;
+    .score-circle {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: inline-flex;
       align-items: center;
-      margin-top: 1rem;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: white;
 
-      .saved mat-icon {
-        color: var(--accent);
+      &.score-excellent {
+        background: linear-gradient(135deg, #06d6a0, #00b894);
+      }
+
+      &.score-good {
+        background: linear-gradient(135deg, #f77f00, #ff9500);
+      }
+
+      &.score-fair {
+        background: linear-gradient(135deg, #ffd60a, #ffc300);
+      }
+    }
+
+    .buddy-info {
+      padding: 1rem 0;
+
+      h3 {
+        margin-bottom: 1rem;
+        color: var(--dark);
+      }
+    }
+
+    .info-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      color: #666;
+
+      mat-icon {
+        color: var(--primary);
+        font-size: 1.25rem;
+        width: 1.25rem;
+        height: 1.25rem;
+      }
+    }
+
+    .common-section {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e0e0e0;
+
+      h4 {
+        font-size: 0.875rem;
+        color: #666;
+        margin-bottom: 0.5rem;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+    }
+
+    .telegram-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: #0088cc;
+      border-radius: 8px;
+      color: white;
+
+      mat-icon {
+        color: white;
+      }
+
+      a {
+        color: white;
+        text-decoration: none;
+        font-weight: 500;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+
+    .requests-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .request-card {
+      .request-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+
+        .avatar {
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          background: var(--primary);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          color: white;
+        }
+
+        h4 {
+          margin: 0;
+          color: var(--dark);
+        }
+
+        .email {
+          margin: 0.25rem 0;
+          color: #666;
+          font-size: 0.875rem;
+        }
+
+        .date {
+          margin: 0;
+          color: #999;
+          font-size: 0.75rem;
+        }
+
+        mat-chip {
+          margin-top: 0.5rem;
+
+          &.status-pending {
+            background: #ffc107;
+          }
+
+          &.status-accepted {
+            background: var(--success);
+            color: white;
+          }
+
+          &.status-rejected {
+            background: #ef476f;
+            color: white;
+          }
+        }
+      }
+    }
+
+    mat-card-actions {
+      display: flex;
+      gap: 0.5rem;
+      padding: 1rem;
+    }
+
+    .connections-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .connection-card {
+      text-align: center;
+      padding: 1.5rem;
+
+      .avatar-large {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: bold;
+        color: white;
+        margin: 0 auto 1rem;
+      }
+
+      h3 {
+        margin: 0.5rem 0;
+        color: var(--dark);
+      }
+
+      .email {
+        color: #666;
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+      }
+
+      .telegram-contact {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: #0088cc;
+        border-radius: 20px;
+        color: white;
+        margin-bottom: 1rem;
+
+        mat-icon {
+          color: white;
+          font-size: 1.25rem;
+          width: 1.25rem;
+          height: 1.25rem;
+        }
+
+        a {
+          color: white;
+          text-decoration: none;
+          font-weight: 500;
+        }
+      }
+
+      .connected-date {
+        color: #999;
+        font-size: 0.75rem;
+        margin: 0;
       }
     }
 
@@ -268,119 +662,212 @@ import { BuddyProfileModalComponent } from '../buddy-profile-modal/buddy-profile
         height: 4rem;
         margin-bottom: 1rem;
       }
+
+      p {
+        margin-bottom: 1.5rem;
+      }
     }
 
     @media (max-width: 768px) {
-      .search-layout {
+      .page-header h1 {
+        font-size: 2rem;
+      }
+
+      .buddy-grid, .connections-grid {
         grid-template-columns: 1fr;
       }
 
-      .filters-card {
-        position: static;
-      }
+      mat-card-actions {
+        flex-direction: column;
 
-      .buddy-grid {
-        grid-template-columns: 1fr;
+        button {
+          width: 100%;
+        }
       }
     }
   `]
 })
 export class BuddySearchComponent implements OnInit {
-  private fb = inject(FormBuilder);
-  private userService = inject(UserService);
+  private buddyService = inject(BuddyMatchingService);
   private gymService = inject(GymService);
-  private dialog = inject(MatDialog);
+  private authService = inject(AuthService);
   private snackBar = inject(MatSnackBar);
 
-  users = signal<User[]>([]);
+  matches = signal<BuddyMatchResponse[]>([]);
+  receivedRequests = signal<BuddyRequestResponse[]>([]);
+  sentRequests = signal<BuddyRequestResponse[]>([]);
+  connections = signal<BuddyRequestResponse[]>([]);
   gyms = signal<Gym[]>([]);
-  savedBuddyIds = signal<number[]>([]);
-  loading = false;
 
-  filterForm = this.fb.group({
-    gymId: [null as number | null],
-    goal: [null as string | null],
-    experience: [null as string | null]
-  });
+  userActivated = signal(false);
+  loadingMatches = false;
+  loadingRequests = false;
+  sendingRequest: number | null = null;
+  processingRequest: number | null = null;
+  selectedTab = 0;
 
   ngOnInit(): void {
+    this.checkUserActivation();
     this.loadGyms();
-    this.loadSavedBuddies();
-    this.search();
+    this.loadMatches();
+    this.loadRequests();
+  }
+
+  checkUserActivation(): void {
+    const user = this.authService.currentUser();
+    if (user) {
+      this.userActivated.set(user.isActivated || false);
+    }
   }
 
   loadGyms(): void {
     this.gymService.getAll().subscribe(gyms => this.gyms.set(gyms));
   }
 
-  loadSavedBuddies(): void {
-    const saved = localStorage.getItem('savedBuddies');
-    if (saved) {
-      this.savedBuddyIds.set(JSON.parse(saved));
-    }
-  }
+  loadMatches(): void {
+    const user = this.authService.currentUser();
+    if (!user || !this.userActivated()) return;
 
-  search(): void {
-    this.loading = true;
-    const filters: any = {};
-
-    if (this.filterForm.value.gymId) {
-      filters.gymId = this.filterForm.value.gymId;
-    }
-    if (this.filterForm.value.goal) {
-      filters.goal = this.filterForm.value.goal;
-    }
-    if (this.filterForm.value.experience) {
-      filters.experience = this.filterForm.value.experience;
-    }
-
-    this.userService.searchUsers(filters).subscribe({
-      next: (users) => {
-        this.users.set(users);
-        this.loading = false;
+    this.loadingMatches = true;
+    this.buddyService.findMatches(user.id).subscribe({
+      next: (matches) => {
+        this.matches.set(matches);
+        this.loadingMatches = false;
       },
       error: () => {
-        this.loading = false;
+        this.loadingMatches = false;
+        this.snackBar.open('Failed to load matches', 'Close', { duration: 3000 });
       }
     });
   }
 
-  getInitials(user: User): string {
-    return user.email.substring(0, 2).toUpperCase();
-  }
+  loadRequests(): void {
+    const user = this.authService.currentUser();
+    if (!user) return;
 
-  getUserName(user: User): string {
-    return user.email.split('@')[0];
-  }
+    this.loadingRequests = true;
 
-  getGymName(gymId: number): string {
-    return this.gyms().find(g => g.id === gymId)?.name || 'Unknown';
-  }
+    // Load received requests
+    this.buddyService.getReceivedRequests(user.id).subscribe({
+      next: (requests) => {
+        this.receivedRequests.set(requests);
+      }
+    });
 
-  viewProfile(user: User): void {
-    this.dialog.open(BuddyProfileModalComponent, {
-      width: '500px',
-      data: { user, gymName: user.gymPreference ? this.getGymName(user.gymPreference) : null }
+    // Load sent requests
+    this.buddyService.getSentRequests(user.id).subscribe({
+      next: (requests) => {
+        this.sentRequests.set(requests);
+      }
+    });
+
+    // Load connections
+    this.buddyService.getAcceptedConnections(user.id).subscribe({
+      next: (connections) => {
+        this.connections.set(connections);
+        this.loadingRequests = false;
+      },
+      error: () => {
+        this.loadingRequests = false;
+      }
     });
   }
 
-  isSaved(userId: number): boolean {
-    return this.savedBuddyIds().includes(userId);
+  sendBuddyRequest(receiverId: number): void {
+    const user = this.authService.currentUser();
+    if (!user) return;
+
+    this.sendingRequest = receiverId;
+
+    this.buddyService.sendRequest({
+      senderId: user.id,
+      receiverId: receiverId
+    }).subscribe({
+      next: () => {
+        this.snackBar.open('Request sent!', 'Close', { duration: 3000 });
+        this.sendingRequest = null;
+        this.loadMatches();
+        this.loadRequests();
+      },
+      error: (err) => {
+        this.sendingRequest = null;
+        this.snackBar.open(err.error?.message || 'Failed to send request', 'Close', { duration: 3000 });
+      }
+    });
   }
 
-  toggleSave(user: User): void {
-    const saved = this.savedBuddyIds();
-    let newSaved: number[];
+  acceptRequest(requestId: number): void {
+    this.processingRequest = requestId;
 
-    if (this.isSaved(user.id)) {
-      newSaved = saved.filter(id => id !== user.id);
-      this.snackBar.open('Removed from saved buddies', 'Close', { duration: 2000 });
-    } else {
-      newSaved = [...saved, user.id];
-      this.snackBar.open('Added to saved buddies', 'Close', { duration: 2000 });
+    this.buddyService.acceptRequest(requestId).subscribe({
+      next: () => {
+        this.snackBar.open('Request accepted!', 'Close', { duration: 3000 });
+        this.processingRequest = null;
+        this.loadRequests();
+        this.loadMatches();
+      },
+      error: () => {
+        this.processingRequest = null;
+        this.snackBar.open('Failed to accept request', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
+  rejectRequest(requestId: number): void {
+    this.processingRequest = requestId;
+
+    this.buddyService.rejectRequest(requestId).subscribe({
+      next: () => {
+        this.snackBar.open('Request rejected', 'Close', { duration: 3000 });
+        this.processingRequest = null;
+        this.loadRequests();
+      },
+      error: () => {
+        this.processingRequest = null;
+        this.snackBar.open('Failed to reject request', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
+  onTabChange(index: number): void {
+    if (index > 0) {
+      this.loadRequests();
     }
+  }
 
-    this.savedBuddyIds.set(newSaved);
-    localStorage.setItem('savedBuddies', JSON.stringify(newSaved));
+  getGymName(gymId: number): string {
+    return this.gyms().find(g => g.id === gymId)?.name || 'Unknown Gym';
+  }
+
+  formatField(value: string): string {
+    if (!value) return '';
+    return value.split('_').map(word =>
+      word.charAt(0) + word.slice(1).toLowerCase()
+    ).join(' ');
+  }
+
+  formatTimeSlot(slot: string): string {
+    const slots: Record<string, string> = {
+      'EARLY_MORNING': 'Early Morning (5-8 AM)',
+      'MORNING': 'Morning (8-12 PM)',
+      'AFTERNOON': 'Afternoon (12-5 PM)',
+      'EVENING': 'Evening (5-9 PM)',
+      'NIGHT': 'Night (9 PM-12 AM)'
+    };
+    return slots[slot] || slot;
+  }
+
+  getScoreClass(score: number): string {
+    if (score >= 75) return 'score-excellent';
+    if (score >= 60) return 'score-good';
+    return 'score-fair';
+  }
+
+  getInitials(email: string): string {
+    return email.substring(0, 2).toUpperCase();
+  }
+
+  getUserName(email: string): string {
+    return email.split('@')[0];
   }
 }

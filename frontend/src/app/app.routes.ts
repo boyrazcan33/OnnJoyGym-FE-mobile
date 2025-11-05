@@ -36,7 +36,21 @@ export const routes: Routes = [
   {
     path: 'buddies',
     canActivate: [authGuard],
-    loadComponent: () => import('./features/buddies/buddy-search/buddy-search.component').then(m => m.BuddySearchComponent)
+    children: [
+      {
+        path: '',
+        redirectTo: 'search',
+        pathMatch: 'full'
+      },
+      {
+        path: 'search',
+        loadComponent: () => import('./features/buddies/buddy-search/buddy-search.component').then(m => m.BuddySearchComponent)
+      },
+      {
+        path: 'preferences',
+        loadComponent: () => import('./features/buddies/buddy-preferences/buddy-preferences.component').then(m => m.BuddyPreferencesComponent)
+      }
+    ]
   },
   {
     path: 'clubs',
@@ -56,6 +70,11 @@ export const routes: Routes = [
     path: 'admin',
     canActivate: [authGuard, adminGuard],
     children: [
+      {
+        path: '',
+        redirectTo: 'videos',
+        pathMatch: 'full'
+      },
       {
         path: 'videos',
         loadComponent: () => import('./features/admin/video-moderation/video-moderation.component').then(m => m.VideoModerationComponent)
