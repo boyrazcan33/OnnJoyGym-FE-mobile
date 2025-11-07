@@ -9,15 +9,27 @@ export class LeaderboardService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiUrl}/leaderboard`;
 
-  getByGym(gymId: number): Observable<Leaderboard[]> {
-    return this.http.get<Leaderboard[]>(`${this.apiUrl}/gym/${gymId}`);
+  getByGym(gymId: number, gender?: string): Observable<Leaderboard[]> {
+    const params: any = {};
+    if (gender) {
+      params.gender = gender;
+    }
+    return this.http.get<Leaderboard[]>(`${this.apiUrl}/gym/${gymId}`, { params });
   }
 
-  getByGymAndCategory(gymId: number, category: string): Observable<Leaderboard[]> {
-    return this.http.get<Leaderboard[]>(`${this.apiUrl}/gym/${gymId}/category/${category}`);
+  getByGymAndCategory(gymId: number, category: string, gender?: string): Observable<Leaderboard[]> {
+    const params: any = {};
+    if (gender) {
+      params.gender = gender;
+    }
+    return this.http.get<Leaderboard[]>(`${this.apiUrl}/gym/${gymId}/category/${category}`, { params });
   }
 
-  getAll(): Observable<Leaderboard[]> {
-    return this.http.get<Leaderboard[]>(this.apiUrl);
+  getAll(gender?: string): Observable<Leaderboard[]> {
+    const params: any = {};
+    if (gender) {
+      params.gender = gender;
+    }
+    return this.http.get<Leaderboard[]>(this.apiUrl, { params });
   }
 }

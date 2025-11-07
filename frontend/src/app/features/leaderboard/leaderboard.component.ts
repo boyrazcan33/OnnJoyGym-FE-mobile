@@ -57,6 +57,15 @@ import { Gym } from '../../models/gym.model';
                 <mat-option value="PULL_UP">Pull Up</mat-option>
               </mat-select>
             </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Gender</mat-label>
+              <mat-select [(value)]="selectedGender" (selectionChange)="loadLeaderboard()">
+                <mat-option [value]="null">All</mat-option>
+                <mat-option value="MALE">Male</mat-option>
+                <mat-option value="FEMALE">Female</mat-option>
+              </mat-select>
+            </mat-form-field>
           </div>
         </mat-card>
 
@@ -311,6 +320,7 @@ export class LeaderboardComponent implements OnInit {
 
   selectedGymId: number | null = null;
   selectedCategory: string | null = null;
+  selectedGender: string | null = null;
 
   displayedColumns: string[] = ['rank', 'user', 'category', 'weight', 'gym', 'date', 'actions'];
 
@@ -327,7 +337,7 @@ export class LeaderboardComponent implements OnInit {
     this.loading = true;
 
     if (this.selectedGymId && this.selectedCategory) {
-      this.leaderboardService.getByGymAndCategory(this.selectedGymId, this.selectedCategory).subscribe({
+      this.leaderboardService.getByGymAndCategory(this.selectedGymId, this.selectedCategory, this.selectedGender || undefined).subscribe({
         next: (data) => {
           this.leaderboard.set(data);
           this.loading = false;
@@ -337,7 +347,7 @@ export class LeaderboardComponent implements OnInit {
         }
       });
     } else if (this.selectedGymId) {
-      this.leaderboardService.getByGym(this.selectedGymId).subscribe({
+      this.leaderboardService.getByGym(this.selectedGymId, this.selectedGender || undefined).subscribe({
         next: (data) => {
           this.leaderboard.set(data);
           this.loading = false;
@@ -347,7 +357,7 @@ export class LeaderboardComponent implements OnInit {
         }
       });
     } else {
-      this.leaderboardService.getAll().subscribe({
+      this.leaderboardService.getAll(this.selectedGender || undefined).subscribe({
         next: (data) => {
           this.leaderboard.set(data);
           this.loading = false;

@@ -7,6 +7,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   telegramUsername: string;
+  gender: string;
 }
 
 export interface AuthResponse {

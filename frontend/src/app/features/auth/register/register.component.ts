@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/services/auth.service';
@@ -19,6 +20,7 @@ import { AuthService } from '../../../core/services/auth.service';
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatButtonModule,
     MatSnackBarModule
   ],
@@ -55,15 +57,25 @@ import { AuthService } from '../../../core/services/auth.service';
             </mat-form-field>
 
             <mat-form-field appearance="outline">
+              <mat-label>Gender</mat-label>
+              <mat-select formControlName="gender" required>
+                <mat-option value="MALE">Male</mat-option>
+                <mat-option value="FEMALE">Female</mat-option>
+              </mat-select>
+              @if (genderControl.hasError('required') && genderControl.touched) {
+                <mat-error>Gender is required</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
               <mat-label>Telegram Username</mat-label>
-              <input matInput formControlName="telegramUsername" placeholder="{{ getPlaceholder() }}" required>
-              <mat-hint>{{ getHint() }}</mat-hint>
+              <input matInput formControlName="telegramUsername" placeholder="@username" required>
+              <mat-hint>Start with &#64; (e.g., &#64;john_doe)</mat-hint>
               @if (telegramControl.hasError('required') && telegramControl.touched) {
                 <mat-error>Telegram username is required</mat-error>
               }
               @if (telegramControl.hasError('pattern') && !telegramControl.hasError('required')) {
-                <mat-error>Must start with {{ getAtSymbol() }} and be 5-32 characters</mat-error>
-              }
+                <mat-error>Must start with &#64; and be 5-32 characters</mat-error>              }
             </mat-form-field>
 
             <button mat-raised-button color="primary" type="submit" [disabled]="loading">
@@ -140,6 +152,7 @@ export class RegisterComponent {
   form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]],
+    gender: ['', Validators.required],
     telegramUsername: ['', [Validators.required, Validators.pattern(/^@[a-zA-Z0-9_]{5,32}$/)]]
   });
 
@@ -151,20 +164,12 @@ export class RegisterComponent {
     return this.form.controls.password;
   }
 
+  get genderControl() {
+    return this.form.controls.gender;
+  }
+
   get telegramControl() {
     return this.form.controls.telegramUsername;
-  }
-
-  getPlaceholder(): string {
-    return '@username';
-  }
-
-  getHint(): string {
-    return 'Start with @ (e.g., @john_doe)';
-  }
-
-  getAtSymbol(): string {
-    return '@';
   }
 
   onSubmit(): void {
@@ -178,6 +183,7 @@ export class RegisterComponent {
     const registerData = {
       email: this.form.value.email!,
       password: this.form.value.password!,
+      gender: this.form.value.gender!,
       telegramUsername: this.form.value.telegramUsername!
     };
 
