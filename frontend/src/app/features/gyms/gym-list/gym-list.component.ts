@@ -7,8 +7,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { FormsModule } from '@angular/forms';
-import { GymService } from '../../../core/services/gym.service';
-import { Gym } from '../../../models/gym.model';
+import { GymBrandService } from '../../../core/services/gym-brand.service';
+import { GymBrand } from '../../../models/review.model';
 
 @Component({
   selector: 'app-gym-list',
@@ -27,45 +27,42 @@ import { Gym } from '../../../models/gym.model';
     <div class="gym-list">
       <div class="container">
         <div class="page-header">
-          <h1>Gyms in Estonia</h1>
-          <p>Find your perfect training spot with expert reviews</p>
+          <h1>Gym Brands in Estonia</h1>
+          <p>Expert reviews from NCAA-certified trainer</p>
         </div>
 
         <mat-form-field appearance="outline" class="search-field">
-          <mat-label>Search gyms</mat-label>
-          <input matInput [(ngModel)]="searchTerm" (ngModelChange)="filterGyms()" placeholder="Name or location...">
+          <mat-label>Search brands</mat-label>
+          <input matInput [(ngModel)]="searchTerm" (ngModelChange)="filterBrands()" placeholder="Brand name...">
           <mat-icon matPrefix>search</mat-icon>
         </mat-form-field>
 
         @if (loading) {
-          <div class="loading">Loading gyms...</div>
+          <div class="loading">Loading gym brands...</div>
         } @else {
           <div class="gym-grid">
-            @for (gym of filteredGyms(); track gym.id) {
-              <mat-card class="gym-card" [routerLink]="['/gyms', gym.id]">
+            @for (brand of filteredBrands(); track brand.id) {
+              <mat-card class="gym-card" [routerLink]="['/gyms', brand.id]">
                 <div class="gym-image">
                   <div class="gym-placeholder">
                     <mat-icon>fitness_center</mat-icon>
                   </div>
                 </div>
                 <mat-card-header>
-                  <mat-card-title>{{ gym.name }}</mat-card-title>
+                  <mat-card-title>{{ brand.name }}</mat-card-title>
                   <mat-card-subtitle>
                     <mat-icon>location_on</mat-icon>
-                    {{ gym.address }}
+                    {{ brand.totalLocations }} locations
                   </mat-card-subtitle>
                 </mat-card-header>
-                <mat-card-content>
-                  <p>{{ gym.description | slice:0:100 }}...</p>
-                </mat-card-content>
                 <mat-card-actions>
-                  <button mat-button color="primary">View Details →</button>
+                  <button mat-button color="primary">View Review</button>
                 </mat-card-actions>
               </mat-card>
             } @empty {
               <div class="empty-state">
                 <mat-icon>search_off</mat-icon>
-                <p>No gyms found</p>
+                <p>No brands found</p>
               </div>
             }
           </div>
@@ -156,10 +153,6 @@ import { Gym } from '../../../models/gym.model';
       }
     }
 
-    mat-card-content p {
-      color: #666;
-    }
-
     .loading, .empty-state {
       text-align: center;
       padding: 4rem 0;
@@ -185,23 +178,23 @@ import { Gym } from '../../../models/gym.model';
   `]
 })
 export class GymListComponent implements OnInit {
-  private gymService = inject(GymService);
+  private gymBrandService = inject(GymBrandService);
 
-  gyms = signal<Gym[]>([]);
-  filteredGyms = signal<Gym[]>([]);
+  brands = signal<GymBrand[]>([]);
+  filteredBrands = signal<GymBrand[]>([]);
   loading = false;
   searchTerm = '';
 
   ngOnInit(): void {
-    this.loadGyms();
+    this.loadBrands();
   }
 
-  loadGyms(): void {
+  loadBrands(): void {
     this.loading = true;
-    this.gymService.getAll().subscribe({
-      next: (gyms) => {
-        this.gyms.set(gyms);
-        this.filteredGyms.set(gyms);
+    this.gymBrandService.getAllBrands().subscribe({
+      next: (brands) => {
+        this.brands.set(brands);
+        this.filteredBrands.set(brands);
         this.loading = false;
       },
       error: () => {
@@ -210,17 +203,16 @@ export class GymListComponent implements OnInit {
     });
   }
 
-  filterGyms(): void {
+  filterBrands(): void {
     const term = this.searchTerm.toLowerCase();
     if (!term) {
-      this.filteredGyms.set(this.gyms());
+      this.filteredBrands.set(this.brands());
       return;
     }
 
-    const filtered = this.gyms().filter(gym =>
-      gym.name.toLowerCase().includes(term) ||
-      gym.address.toLowerCase().includes(term)
+    const filtered = this.brands().filter(brand =>
+      brand.name.toLowerCase().includes(term)
     );
-    this.filteredGyms.set(filtered);
+    this.filteredBrands.set(filtered);
   }
 }

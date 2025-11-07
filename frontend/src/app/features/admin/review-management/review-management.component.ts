@@ -9,9 +9,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ReviewService } from '../../../core/services/review.service';
-import { GymService } from '../../../core/services/gym.service';
-import { Review } from '../../../models/review.model';
-import { Gym } from '../../../models/gym.model';
+import { GymBrandService } from '../../../core/services/gym-brand.service';
+import { Review, GymBrand } from '../../../models/review.model';
 
 @Component({
   selector: 'app-review-management',
@@ -35,7 +34,6 @@ import { Gym } from '../../../models/gym.model';
         </div>
 
         <div class="layout">
-          <!-- Review Form -->
           <mat-card class="form-card">
             <mat-card-header>
               <mat-card-title>{{ editingReview() ? 'Edit Review' : 'Add New Review' }}</mat-card-title>
@@ -44,23 +42,43 @@ import { Gym } from '../../../models/gym.model';
             <mat-card-content>
               <form [formGroup]="reviewForm" (ngSubmit)="saveReview()">
                 <mat-form-field appearance="outline">
-                  <mat-label>Gym</mat-label>
-                  <mat-select formControlName="gymId" required>
-                    @for (gym of gyms(); track gym.id) {
-                      <mat-option [value]="gym.id">{{ gym.name }}</mat-option>
+                  <mat-label>Gym Brand</mat-label>
+                  <mat-select formControlName="brandId" required>
+                    @for (brand of brands(); track brand.id) {
+                      <mat-option [value]="brand.id">{{ brand.name }}</mat-option>
                     }
                   </mat-select>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
-                  <mat-label>Rating</mat-label>
+                  <mat-label>Rating (1-5)</mat-label>
                   <mat-select formControlName="rating" required>
-                    <mat-option [value]="1">⭐ 1 - Poor</mat-option>
-                    <mat-option [value]="2">⭐⭐ 2 - Fair</mat-option>
-                    <mat-option [value]="3">⭐⭐⭐ 3 - Good</mat-option>
-                    <mat-option [value]="4">⭐⭐⭐⭐ 4 - Very Good</mat-option>
-                    <mat-option [value]="5">⭐⭐⭐⭐⭐ 5 - Excellent</mat-option>
+                    <mat-option [value]="1">1 - Poor</mat-option>
+                    <mat-option [value]="2">2 - Fair</mat-option>
+                    <mat-option [value]="3">3 - Good</mat-option>
+                    <mat-option [value]="4">4 - Very Good</mat-option>
+                    <mat-option [value]="5">5 - Excellent</mat-option>
                   </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Rating Decimal (e.g. 4.7)</mat-label>
+                  <input matInput type="number" step="0.1" min="1" max="5" formControlName="ratingDecimal" required>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Price Info</mat-label>
+                  <input matInput formControlName="priceInfo" placeholder="€59/month">
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Pros (JSON array)</mat-label>
+                  <textarea matInput formControlName="pros" rows="3" placeholder='["Pro 1", "Pro 2"]'></textarea>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Cons (JSON array)</mat-label>
+                  <textarea matInput formControlName="cons" rows="3" placeholder='["Con 1", "Con 2"]'></textarea>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
@@ -71,7 +89,6 @@ import { Gym } from '../../../models/gym.model';
                 <mat-form-field appearance="outline">
                   <mat-label>Review Content</mat-label>
                   <textarea matInput formControlName="content" rows="10" required></textarea>
-                  <mat-hint>Write a detailed expert review (300-500 words recommended)</mat-hint>
                 </mat-form-field>
 
                 <div class="form-actions">
@@ -86,7 +103,6 @@ import { Gym } from '../../../models/gym.model';
             </mat-card-content>
           </mat-card>
 
-          <!-- Reviews List -->
           <div class="reviews-list">
             <h2>All Reviews ({{ reviews().length }})</h2>
 
@@ -99,14 +115,9 @@ import { Gym } from '../../../models/gym.model';
                     <mat-card-header>
                       <div class="review-header">
                         <div>
-                          <mat-card-title>{{ getGymName(review.gym.id) }}</mat-card-title>
+                          <mat-card-title>{{ getBrandName(review.gymBrand.id) }}</mat-card-title>
                           <mat-card-subtitle>
-                            <div class="rating">
-                              @for (star of getStars(review.rating); track $index) {
-                                <mat-icon>{{ star }}</mat-icon>
-                              }
-                            </div>
-                            By {{ review.authorName }} • {{ review.createdAt | date:'MMM dd, yyyy' }}
+                            Rating: {{ review.ratingDecimal || review.rating }}/5
                           </mat-card-subtitle>
                         </div>
                       </div>
@@ -131,7 +142,7 @@ import { Gym } from '../../../models/gym.model';
               } @else {
                 <div class="empty-state">
                   <mat-icon>rate_review</mat-icon>
-                  <p>No reviews yet. Create your first expert review!</p>
+                  <p>No reviews yet</p>
                 </div>
               }
             }
@@ -204,19 +215,6 @@ import { Gym } from '../../../models/gym.model';
 
       .review-header {
         width: 100%;
-
-        .rating {
-          display: flex;
-          gap: 0.25rem;
-          margin-top: 0.5rem;
-
-          mat-icon {
-            font-size: 1rem;
-            width: 1rem;
-            height: 1rem;
-            color: #ffd700;
-          }
-        }
       }
 
       .review-content {
@@ -253,53 +251,43 @@ import { Gym } from '../../../models/gym.model';
         position: static;
       }
     }
-
-    @media (max-width: 768px) {
-      .page-header h1 {
-        font-size: 2rem;
-      }
-
-      .form-actions {
-        flex-direction: column;
-
-        button {
-          width: 100%;
-        }
-      }
-    }
   `]
 })
 export class ReviewManagementComponent implements OnInit {
   private fb = inject(FormBuilder);
   private reviewService = inject(ReviewService);
-  private gymService = inject(GymService);
+  private gymBrandService = inject(GymBrandService);
   private snackBar = inject(MatSnackBar);
 
-  gyms = signal<Gym[]>([]);
+  brands = signal<GymBrand[]>([]);
   reviews = signal<Review[]>([]);
   editingReview = signal<Review | null>(null);
   loading = false;
   saving = false;
 
   reviewForm = this.fb.group({
-    gymId: [null as number | null, Validators.required],
+    brandId: [null as number | null, Validators.required],
     rating: [5, [Validators.required, Validators.min(1), Validators.max(5)]],
+    ratingDecimal: [null as number | null, [Validators.required, Validators.min(1), Validators.max(5)]],
+    priceInfo: [''],
+    pros: [''],
+    cons: [''],
     authorName: ['Expert Trainer', Validators.required],
     content: ['', [Validators.required, Validators.minLength(100)]]
   });
 
   ngOnInit(): void {
-    this.loadGyms();
+    this.loadBrands();
     this.loadReviews();
   }
 
-  loadGyms(): void {
-    this.gymService.getAll().subscribe(gyms => this.gyms.set(gyms));
+  loadBrands(): void {
+    this.gymBrandService.getAllBrands().subscribe(brands => this.brands.set(brands));
   }
 
   loadReviews(): void {
     this.loading = true;
-    this.reviewService.getAll().subscribe({
+    this.reviewService.getAllReviews().subscribe({
       next: (reviews) => {
         this.reviews.set(reviews);
         this.loading = false;
@@ -319,8 +307,12 @@ export class ReviewManagementComponent implements OnInit {
     this.saving = true;
 
     const reviewData: any = {
-      gym: { id: this.reviewForm.value.gymId },
+      gymBrand: { id: this.reviewForm.value.brandId },
       rating: this.reviewForm.value.rating,
+      ratingDecimal: this.reviewForm.value.ratingDecimal,
+      priceInfo: this.reviewForm.value.priceInfo,
+      pros: this.reviewForm.value.pros,
+      cons: this.reviewForm.value.cons,
       authorName: this.reviewForm.value.authorName,
       content: this.reviewForm.value.content,
       isExpert: true
@@ -329,9 +321,9 @@ export class ReviewManagementComponent implements OnInit {
     const editingId = this.editingReview()?.id;
 
     if (editingId) {
-      this.reviewService.update(editingId, reviewData).subscribe({
+      this.reviewService.updateReview(editingId, reviewData).subscribe({
         next: () => {
-          this.snackBar.open('Review updated successfully!', 'Close', { duration: 3000 });
+          this.snackBar.open('Review updated!', 'Close', { duration: 3000 });
           this.resetForm();
           this.loadReviews();
           this.saving = false;
@@ -342,9 +334,9 @@ export class ReviewManagementComponent implements OnInit {
         }
       });
     } else {
-      this.reviewService.create(reviewData).subscribe({
+      this.reviewService.createReview(reviewData).subscribe({
         next: () => {
-          this.snackBar.open('Review created successfully!', 'Close', { duration: 3000 });
+          this.snackBar.open('Review created!', 'Close', { duration: 3000 });
           this.resetForm();
           this.loadReviews();
           this.saving = false;
@@ -360,8 +352,12 @@ export class ReviewManagementComponent implements OnInit {
   editReview(review: Review): void {
     this.editingReview.set(review);
     this.reviewForm.patchValue({
-      gymId: review.gym.id,
+      brandId: review.gymBrand.id,
       rating: review.rating,
+      ratingDecimal: review.ratingDecimal,
+      priceInfo: review.priceInfo,
+      pros: review.pros,
+      cons: review.cons,
       authorName: review.authorName,
       content: review.content
     });
@@ -369,9 +365,9 @@ export class ReviewManagementComponent implements OnInit {
   }
 
   deleteReview(review: Review): void {
-    if (!confirm('Are you sure you want to delete this review?')) return;
+    if (!confirm('Delete this review?')) return;
 
-    this.reviewService.delete(review.id).subscribe({
+    this.reviewService.deleteReview(review.id).subscribe({
       next: () => {
         this.snackBar.open('Review deleted', 'Close', { duration: 3000 });
         this.loadReviews();
@@ -389,22 +385,18 @@ export class ReviewManagementComponent implements OnInit {
   resetForm(): void {
     this.editingReview.set(null);
     this.reviewForm.reset({
-      gymId: null,
+      brandId: null,
       rating: 5,
+      ratingDecimal: null,
+      priceInfo: '',
+      pros: '',
+      cons: '',
       authorName: 'Expert Trainer',
       content: ''
     });
   }
 
-  getGymName(gymId: number): string {
-    return this.gyms().find(g => g.id === gymId)?.name || 'Unknown Gym';
-  }
-
-  getStars(rating: number): string[] {
-    const stars: string[] = [];
-    for (let i = 1; i <= 5; i++) {
-      stars.push(i <= rating ? 'star' : 'star_border');
-    }
-    return stars;
+  getBrandName(brandId: number): string {
+    return this.brands().find(b => b.id === brandId)?.name || 'Unknown Brand';
   }
 }

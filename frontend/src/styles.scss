@@ -1,14 +1,12 @@
 @use '@angular/material' as mat;
 
-// Include the common styles for Angular Material
 @include mat.core();
 
-// Define the theme using the new M3 API
 $theme: mat.define-theme((
   color: (
     theme-type: light,
-    primary: mat.$orange-palette,
-    tertiary: mat.$blue-palette,
+    primary: mat.$cyan-palette,
+    tertiary: mat.$purple-palette,
   ),
   typography: (
     brand-family: 'Roboto, sans-serif',
@@ -19,12 +17,10 @@ $theme: mat.define-theme((
   )
 ));
 
-// Include theme styles for all components - wrapped in html selector for M3
 html {
   @include mat.all-component-themes($theme);
 }
 
-// Global reset
 * {
   margin: 0;
   padding: 0;
@@ -36,18 +32,16 @@ body {
   background: #f4f4f9;
 }
 
-// Custom colors
 :root {
-  --primary: #ff6b35;
-  --secondary: #004e89;
-  --accent: #f77f00;
-  --dark: #1a1a2e;
-  --light: #f4f4f9;
-  --success: #06d6a0;
-  --error: #ef476f;
+  --primary: #00d9ff;
+  --secondary: #1a1a2e;
+  --accent: #b967ff;
+  --dark: #0a0e27;
+  --light: #f4f4f8;
+  --success: #05ffa1;
+  --error: #ff2e63;
 }
 
-// Utilities
 .container {
   max-width: 1200px;
   margin: 0 auto;

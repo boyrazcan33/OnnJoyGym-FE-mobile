@@ -6,10 +6,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
-import { GymService } from '../../../core/services/gym.service';
+import { GymBrandService } from '../../../core/services/gym-brand.service';
 import { ReviewService } from '../../../core/services/review.service';
-import { Gym } from '../../../models/gym.model';
-import { Review } from '../../../models/review.model';
+import { GymBrand, Review } from '../../../models/review.model';
 
 @Component({
   selector: 'app-gym-detail',
@@ -28,10 +27,10 @@ import { Review } from '../../../models/review.model';
       <div class="container">
         @if (loading) {
           <div class="loading">Loading...</div>
-        } @else if (gym()) {
+        } @else if (brand()) {
           <button mat-button routerLink="/gyms" class="back-button">
             <mat-icon>arrow_back</mat-icon>
-            Back to Gyms
+            Back to Brands
           </button>
 
           <div class="gym-header">
@@ -41,19 +40,18 @@ import { Review } from '../../../models/review.model';
               </div>
             </div>
             <div class="gym-info">
-              <h1>{{ gym()!.name }}</h1>
-              <p class="address">
+              <h1>{{ brand()!.name }}</h1>
+              <p class="locations">
                 <mat-icon>location_on</mat-icon>
-                {{ gym()!.address }}
+                {{ brand()!.totalLocations }} locations in Estonia
               </p>
-              <p class="description">{{ gym()!.description }}</p>
             </div>
           </div>
 
           <mat-divider></mat-divider>
 
           <div class="reviews-section">
-            <h2>Expert Reviews</h2>
+            <h2>Expert Review</h2>
 
             @if (reviews().length > 0) {
               @for (review of reviews(); track review.id) {
@@ -69,6 +67,7 @@ import { Review } from '../../../models/review.model';
                         }
                       </div>
                       <div class="review-rating">
+                        <strong>{{ review.ratingDecimal || review.rating }}/5</strong>
                         @for (star of getStars(review.rating); track $index) {
                           <mat-icon>{{ star }}</mat-icon>
                         }
@@ -76,7 +75,37 @@ import { Review } from '../../../models/review.model';
                     </div>
                   </mat-card-header>
                   <mat-card-content>
+                    @if (review.priceInfo) {
+                      <div class="price-section">
+                        <mat-icon>payments</mat-icon>
+                        <strong>{{ review.priceInfo }}</strong>
+                      </div>
+                    }
+
+                    @if (review.pros) {
+                      <div class="pros-section">
+                        <h4>Pros</h4>
+                        <ul>
+                          @for (pro of parsePros(review.pros); track $index) {
+                            <li>{{ pro }}</li>
+                          }
+                        </ul>
+                      </div>
+                    }
+
+                    @if (review.cons) {
+                      <div class="cons-section">
+                        <h4>Cons</h4>
+                        <ul>
+                          @for (con of parseCons(review.cons); track $index) {
+                            <li>{{ con }}</li>
+                          }
+                        </ul>
+                      </div>
+                    }
+
                     <p class="review-content">{{ review.content }}</p>
+                    <p class="review-author-name">{{ review.authorName }}</p>
                     <p class="review-date">{{ review.createdAt | date:'MMM dd, yyyy' }}</p>
                   </mat-card-content>
                 </mat-card>
@@ -139,18 +168,12 @@ import { Review } from '../../../models/review.model';
         margin-bottom: 1rem;
       }
 
-      .address {
+      .locations {
         display: flex;
         align-items: center;
         gap: 0.5rem;
         color: #666;
         font-size: 1.125rem;
-        margin-bottom: 1rem;
-      }
-
-      .description {
-        color: #666;
-        line-height: 1.6;
       }
     }
 
@@ -189,7 +212,8 @@ import { Review } from '../../../models/review.model';
 
     .review-rating {
       display: flex;
-      gap: 0.25rem;
+      gap: 0.5rem;
+      align-items: center;
 
       mat-icon {
         color: #ffd700;
@@ -199,12 +223,63 @@ import { Review } from '../../../models/review.model';
       }
     }
 
+    .price-section {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem;
+      background: var(--light);
+      border-radius: 8px;
+      margin-bottom: 1rem;
+
+      mat-icon {
+        color: var(--success);
+      }
+    }
+
+    .pros-section, .cons-section {
+      margin-bottom: 1rem;
+
+      h4 {
+        color: var(--dark);
+        margin-bottom: 0.5rem;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 1.5rem;
+
+        li {
+          margin-bottom: 0.5rem;
+          line-height: 1.6;
+        }
+      }
+    }
+
+    .pros-section {
+      ul li {
+        color: #2d6a4f;
+      }
+    }
+
+    .cons-section {
+      ul li {
+        color: #9d0208;
+      }
+    }
+
     .review-content {
       font-size: 1rem;
       line-height: 1.8;
       color: #333;
       margin-bottom: 1rem;
       white-space: pre-line;
+    }
+
+    .review-author-name {
+      font-weight: 500;
+      color: var(--dark);
+      margin-bottom: 0.5rem;
     }
 
     .review-date {
@@ -250,24 +325,24 @@ import { Review } from '../../../models/review.model';
 })
 export class GymDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
-  private gymService = inject(GymService);
+  private gymBrandService = inject(GymBrandService);
   private reviewService = inject(ReviewService);
 
-  gym = signal<Gym | null>(null);
+  brand = signal<GymBrand | null>(null);
   reviews = signal<Review[]>([]);
   loading = false;
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.loadGym(id);
+    this.loadBrand(id);
     this.loadReviews(id);
   }
 
-  loadGym(id: number): void {
+  loadBrand(id: number): void {
     this.loading = true;
-    this.gymService.getById(id).subscribe({
-      next: (gym) => {
-        this.gym.set(gym);
+    this.gymBrandService.getBrandById(id).subscribe({
+      next: (brand) => {
+        this.brand.set(brand);
         this.loading = false;
       },
       error: () => {
@@ -276,8 +351,8 @@ export class GymDetailComponent implements OnInit {
     });
   }
 
-  loadReviews(gymId: number): void {
-    this.reviewService.getByGymId(gymId).subscribe(reviews => {
+  loadReviews(brandId: number): void {
+    this.reviewService.getReviewsByBrandId(brandId).subscribe(reviews => {
       this.reviews.set(reviews);
     });
   }
@@ -288,5 +363,21 @@ export class GymDetailComponent implements OnInit {
       stars.push(i <= rating ? 'star' : 'star_border');
     }
     return stars;
+  }
+
+  parsePros(pros: string): string[] {
+    try {
+      return JSON.parse(pros);
+    } catch {
+      return [];
+    }
+  }
+
+  parseCons(cons: string): string[] {
+    try {
+      return JSON.parse(cons);
+    } catch {
+      return [];
+    }
   }
 }

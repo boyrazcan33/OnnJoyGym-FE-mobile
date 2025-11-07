@@ -1,9 +1,17 @@
-import { Gym } from './gym.model';
+export interface GymBrand {
+  id: number;
+  name: string;
+  totalLocations: number;
+}
 
 export interface Review {
   id: number;
-  gym: Gym;
+  gymBrand: GymBrand;
   rating: number;
+  ratingDecimal: number;
+  priceInfo: string;
+  pros: string;
+  cons: string;
   content: string;
   authorName: string;
   isExpert: boolean;

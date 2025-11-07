@@ -1,19 +1,15 @@
-export interface Exercise {
-  name: string;
+export interface WeeklyProgramDTO {
+  weekNumber: number;
+  weekRange: string;
+  mainExercise: string;
   sets: number;
   reps: string;
-  rest: string;
-  notes: string;
-}
-
-export interface DayProgram {
-  dayName: string;
-  exercises: Exercise[];
-}
-
-export interface WeeklyProgram {
-  clubName: string;
-  level: string;
-  goal: string;
-  days: DayProgram[];
+  intensity: string;
+  frequency: string;
+  accessories: string[];
+  description: string;
+  recommendedWeightMin: number;
+  recommendedWeightMax: number;
+  isLocked: boolean;
+  isCompleted: boolean;
 }

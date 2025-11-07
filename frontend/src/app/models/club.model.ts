@@ -1,8 +1,9 @@
-export interface Club {
+export interface ClubProgress {
   id: number;
-  name: string;
-  description: string;
-  goal: string;
-  level: string;
-  createdAt: string;
+  userId: number;
+  clubId: number;
+  startingMax: number;
+  currentWeek: number;
+  startDate: string;
+  lastUpdated: string;
 }

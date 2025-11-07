@@ -7,12 +7,13 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ClubService } from '../../../core/services/club.service';
-import { UserService } from '../../../core/services/user.service';
+import { ClubProgressService } from '../../../core/services/club-progress.service';
 import { ProgramService } from '../../../core/services/program.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Club } from '../../../models/club.model';
-import { WeeklyProgram } from '../../../models/program.model';
+import { WeeklyProgramDTO } from '../../../models/program.model';
 import { ProgramViewModalComponent } from '../program-view-modal/program-view-modal.component';
+import { StartingMaxModalComponent } from '../starting-max-modal/starting-max-modal.component';
 
 interface ClubCategory {
   title: string;
@@ -279,7 +280,7 @@ interface ClubCategory {
 })
 export class ClubListComponent implements OnInit {
   private clubService = inject(ClubService);
-  private userService = inject(UserService);
+  private clubProgressService = inject(ClubProgressService);
   private programService = inject(ProgramService);
   private authService = inject(AuthService);
   private dialog = inject(MatDialog);
@@ -315,19 +316,17 @@ export class ClubListComponent implements OnInit {
 
     const categories: ClubCategory[] = [];
 
-    // Strength Category
     if (strengthClubs.length > 0) {
       categories.push({
-        title: '💪 Strength Training Programs',
-        description: 'Build raw power and increase your big 3 lifts (Bench, Squat, Deadlift)',
+        title: 'Strength Training Programs',
+        description: 'Build raw power and increase your big 3 lifts',
         clubs: strengthClubs.sort((a, b) => this.sortByLevel(a.level, b.level))
       });
     }
 
-    // Hypertrophy Category
     if (hypertrophyClubs.length > 0) {
       categories.push({
-        title: '🏋️ Muscle Building Programs',
+        title: 'Muscle Building Programs',
         description: 'Maximize muscle growth with volume-focused training',
         clubs: hypertrophyClubs.sort((a, b) => this.sortByLevel(a.level, b.level))
       });
@@ -337,7 +336,7 @@ export class ClubListComponent implements OnInit {
   }
 
   sortByLevel(a: string, b: string): number {
-    const order: { [key: string]: number } = {
+    const order: Record<string, number> = {
       'BEGINNER': 1,
       'INTERMEDIATE': 2,
       'ADVANCED': 3
@@ -367,14 +366,23 @@ export class ClubListComponent implements OnInit {
     const user = this.authService.currentUser();
     if (!user) return;
 
-    this.userService.joinClub(user.id, club.id).subscribe({
-      next: () => {
-        this.snackBar.open(`Joined ${club.name}!`, 'Close', { duration: 3000 });
-        this.myClubIds.set([...this.myClubIds(), club.id]);
-        this.viewProgram(club);
-      },
-      error: (err) => {
-        this.snackBar.open(err.error?.message || 'Failed to join club', 'Close', { duration: 3000 });
+    const dialogRef = this.dialog.open(StartingMaxModalComponent, {
+      width: '400px',
+      data: { clubName: club.name }
+    });
+
+    dialogRef.afterClosed().subscribe((startingMax: number) => {
+      if (startingMax) {
+        this.clubProgressService.joinClubWithProgress(user.id, club.id, startingMax).subscribe({
+          next: () => {
+            this.snackBar.open(`Joined ${club.name}!`, 'Close', { duration: 3000 });
+            this.myClubIds.set([...this.myClubIds(), club.id]);
+            this.viewProgram(club);
+          },
+          error: (err) => {
+            this.snackBar.open(err.error?.message || 'Failed to join club', 'Close', { duration: 3000 });
+          }
+        });
       }
     });
   }
@@ -387,12 +395,12 @@ export class ClubListComponent implements OnInit {
     const user = this.authService.currentUser();
     if (!user) return;
 
-    this.programService.getWeekly(user.id, club.id).subscribe({
-      next: (program) => {
+    this.programService.getWeeklyProgram(user.id, club.id).subscribe({
+      next: (programList: WeeklyProgramDTO[]) => {
         this.dialog.open(ProgramViewModalComponent, {
           width: '800px',
           maxWidth: '95vw',
-          data: program
+          data: { programList, clubName: club.name }
         });
       },
       error: () => {

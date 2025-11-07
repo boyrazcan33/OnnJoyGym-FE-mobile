@@ -4,7 +4,13 @@ import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
-import { WeeklyProgram } from '../../../models/program.model';
+import { MatChipsModule } from '@angular/material/chips';
+import { WeeklyProgramDTO } from '../../../models/program.model';
+
+interface ProgramData {
+  programList: WeeklyProgramDTO[];
+  clubName: string;
+}
 
 @Component({
   selector: 'app-program-view-modal',
@@ -14,42 +20,64 @@ import { WeeklyProgram } from '../../../models/program.model';
     MatDialogModule,
     MatButtonModule,
     MatExpansionModule,
-    MatIconModule
+    MatIconModule,
+    MatChipsModule
   ],
   template: `
     <h2 mat-dialog-title>
       <mat-icon>assignment</mat-icon>
-      {{ program.clubName }} - {{ program.level }}
+      {{ data.clubName }}
     </h2>
     <mat-dialog-content>
-      <div class="program-info">
-        <p><strong>Goal:</strong> {{ program.goal }}</p>
-      </div>
-
       <mat-accordion>
-        @for (day of program.days; track day.dayName) {
-          <mat-expansion-panel>
+        @for (week of data.programList; track week.weekNumber) {
+          <mat-expansion-panel [disabled]="week.isLocked">
             <mat-expansion-panel-header>
-              <mat-panel-title>{{ day.dayName }}</mat-panel-title>
-              <mat-panel-description>
-                {{ day.exercises.length }} exercises
-              </mat-panel-description>
+              <mat-panel-title>
+                Week {{ week.weekNumber }}: {{ week.weekRange }}
+                @if (week.isLocked) {
+                  <mat-chip class="locked-chip">
+                    <mat-icon>lock</mat-icon>
+                    Locked
+                  </mat-chip>
+                }
+                @if (week.isCompleted) {
+                  <mat-chip class="completed-chip">
+                    <mat-icon>check_circle</mat-icon>
+                    Completed
+                  </mat-chip>
+                }
+              </mat-panel-title>
             </mat-expansion-panel-header>
 
-            <div class="exercises">
-              @for (exercise of day.exercises; track $index) {
-                <div class="exercise-card">
-                  <h4>{{ exercise.name }}</h4>
-                  <div class="exercise-details">
-                    <span><strong>Sets:</strong> {{ exercise.sets }}</span>
-                    <span><strong>Reps:</strong> {{ exercise.reps }}</span>
-                    <span><strong>Rest:</strong> {{ exercise.rest }}</span>
-                  </div>
-                  @if (exercise.notes) {
-                    <p class="exercise-notes">💡 {{ exercise.notes }}</p>
-                  }
+            <div class="week-content">
+              <div class="main-exercise">
+                <h3>{{ week.mainExercise }}</h3>
+                <p><strong>Sets:</strong> {{ week.sets }}</p>
+                <p><strong>Reps:</strong> {{ week.reps }}</p>
+                <p><strong>Intensity:</strong> {{ week.intensity }}</p>
+                <p><strong>Frequency:</strong> {{ week.frequency }}</p>
+              </div>
+
+              @if (week.recommendedWeightMin && week.recommendedWeightMax) {
+                <div class="recommended-weights">
+                  <mat-icon>fitness_center</mat-icon>
+                  <strong>Recommended: {{ week.recommendedWeightMin }} - {{ week.recommendedWeightMax }} kg</strong>
                 </div>
               }
+
+              @if (week.accessories.length > 0) {
+                <div class="accessories">
+                  <h4>Accessory Exercises</h4>
+                  <div class="accessory-chips">
+                    @for (accessory of week.accessories; track accessory) {
+                      <mat-chip>{{ accessory }}</mat-chip>
+                    }
+                  </div>
+                </div>
+              }
+
+              <p class="description">{{ week.description }}</p>
             </div>
           </mat-expansion-panel>
         }
@@ -71,63 +99,103 @@ import { WeeklyProgram } from '../../../models/program.model';
       gap: 0.5rem;
     }
 
-    .program-info {
-      padding: 1rem;
-      background: var(--light);
-      border-radius: 8px;
-      margin-bottom: 1rem;
-    }
-
     mat-accordion {
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
     }
 
-    .exercises {
-      padding: 1rem 0;
+    mat-panel-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
-    .exercise-card {
-      padding: 1rem;
-      background: var(--light);
-      border-radius: 8px;
-      margin-bottom: 1rem;
+    .locked-chip {
+      background: #9e9e9e;
+      color: white;
 
-      h4 {
-        color: var(--primary);
-        margin-bottom: 0.5rem;
+      mat-icon {
+        color: white;
       }
     }
 
-    .exercise-details {
-      display: flex;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-      margin-bottom: 0.5rem;
+    .completed-chip {
+      background: var(--success);
+      color: white;
 
-      span {
+      mat-icon {
+        color: white;
+      }
+    }
+
+    .week-content {
+      padding: 1rem 0;
+    }
+
+    .main-exercise {
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: var(--light);
+      border-radius: 8px;
+
+      h3 {
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+      }
+
+      p {
+        margin: 0.25rem 0;
         color: #666;
       }
     }
 
-    .exercise-notes {
-      margin-top: 0.5rem;
-      padding: 0.5rem;
-      background: white;
-      border-radius: 4px;
-      font-size: 0.875rem;
+    .recommended-weights {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem;
+      background: #e8f5e9;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+
+      mat-icon {
+        color: var(--success);
+      }
+
+      strong {
+        color: #2d6a4f;
+      }
+    }
+
+    .accessories {
+      margin-bottom: 1rem;
+
+      h4 {
+        color: var(--dark);
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    .accessory-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .description {
       color: #666;
+      line-height: 1.6;
+      font-style: italic;
     }
 
     @media (max-width: 768px) {
-      .exercise-details {
-        flex-direction: column;
-        gap: 0.5rem;
+      .week-content {
+        font-size: 0.875rem;
       }
     }
   `]
 })
 export class ProgramViewModalComponent {
-  program: WeeklyProgram = inject(MAT_DIALOG_DATA);
+  data: ProgramData = inject(MAT_DIALOG_DATA);
 }
