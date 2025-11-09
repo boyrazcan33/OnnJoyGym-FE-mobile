@@ -145,7 +145,13 @@ import { MatCardModule } from '@angular/material/card';
   `,
   styles: [`
     .hero {
-      background: linear-gradient(135deg, var(--secondary) 0%, var(--dark) 100%);
+      /* Renk katmanını (linear-gradient) kaldırdık */
+      background: url('/assets/brotherhood.png');
+
+      background-size: 100% 100%;
+      /* Resmi ortala */
+      background-position: center center;
+      background-repeat: no-repeat;
       color: white;
       padding: 6rem 0;
       text-align: center;

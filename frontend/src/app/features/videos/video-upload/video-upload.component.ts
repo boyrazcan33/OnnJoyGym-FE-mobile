@@ -102,7 +102,14 @@ import { Gym } from '../../../models/gym.model';
                 </ul>
               </div>
 
-              @if (uploadProgress() > 0) {
+              @if (uploadStatus()) {
+                <div class="status-message" [class]="uploadStatus()?.type">
+                  <mat-icon>{{ uploadStatus()?.icon }}</mat-icon>
+                  <span>{{ uploadStatus()?.message }}</span>
+                </div>
+              }
+
+              @if (uploadProgress() > 0 && uploadProgress() < 100) {
                 <div class="upload-progress">
                   <mat-progress-bar mode="determinate" [value]="uploadProgress()"></mat-progress-bar>
                   <span>{{ uploadProgress() }}%</span>
@@ -179,6 +186,39 @@ import { Gym } from '../../../models/gym.model';
       }
     }
 
+    .status-message {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem;
+      border-radius: 8px;
+      font-weight: 500;
+
+      &.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      &.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      &.info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+
+      mat-icon {
+        font-size: 1.5rem;
+        width: 1.5rem;
+        height: 1.5rem;
+      }
+    }
+
     .upload-progress {
       display: flex;
       flex-direction: column;
@@ -221,6 +261,7 @@ export class VideoUploadComponent implements OnInit {
   gyms = signal<Gym[]>([]);
   selectedFile = signal<File | null>(null);
   uploadProgress = signal(0);
+  uploadStatus = signal<{ type: string; icon: string; message: string } | null>(null);
   uploading = false;
 
   form = this.fb.group({
@@ -245,6 +286,7 @@ export class VideoUploadComponent implements OnInit {
         return;
       }
       this.selectedFile.set(file);
+      this.uploadStatus.set(null);
     }
   }
 
@@ -265,6 +307,8 @@ export class VideoUploadComponent implements OnInit {
     if (!user) return;
 
     this.uploading = true;
+    this.uploadProgress.set(0);
+    this.uploadStatus.set(null);
 
     const uploadData = {
       userId: user.id,
@@ -283,7 +327,11 @@ export class VideoUploadComponent implements OnInit {
       },
       error: (err) => {
         this.uploading = false;
-        this.snackBar.open(err.error?.message || 'Failed to get upload URL', 'Close', { duration: 3000 });
+        this.uploadStatus.set({
+          type: 'error',
+          icon: 'error',
+          message: err.error?.message || 'Failed to get upload URL'
+        });
       }
     });
   }
@@ -301,14 +349,37 @@ export class VideoUploadComponent implements OnInit {
           const progress = Math.round(100 * event.loaded / (event.total || 1));
           this.uploadProgress.set(progress);
         } else if (event.type === HttpEventType.Response) {
-          this.snackBar.open('Video uploaded successfully! Waiting for admin approval.', 'Close', { duration: 3000 });
-          this.router.navigate(['/dashboard']);
+          // Upload complete
+          this.uploadProgress.set(100);
+          this.uploadStatus.set({
+            type: 'success',
+            icon: 'check_circle',
+            message: '✅ Video uploaded! Checking content...'
+          });
+
+          // Wait 15-30 seconds before showing final status
+          setTimeout(() => {
+            this.uploadStatus.set({
+              type: 'info',
+              icon: 'info',
+              message: '⏳ Awaiting admin review for technique validation'
+            });
+
+            setTimeout(() => {
+              this.snackBar.open('Video uploaded successfully! Waiting for admin approval.', 'Close', { duration: 3000 });
+              this.router.navigate(['/dashboard']);
+            }, 2000);
+          }, 3000);
         }
       },
       error: () => {
         this.uploading = false;
         this.uploadProgress.set(0);
-        this.snackBar.open('Upload failed', 'Close', { duration: 3000 });
+        this.uploadStatus.set({
+          type: 'error',
+          icon: 'error',
+          message: '❌ Upload failed. Please try again.'
+        });
       }
     });
   }

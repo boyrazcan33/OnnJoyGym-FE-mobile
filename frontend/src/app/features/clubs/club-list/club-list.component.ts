@@ -368,16 +368,20 @@ export class ClubListComponent implements OnInit {
 
     const dialogRef = this.dialog.open(StartingMaxModalComponent, {
       width: '400px',
-      data: { clubName: club.name }
+      data: { clubName: club.name, clubId: club.id } // ✅ clubId eklendi
     });
 
-    dialogRef.afterClosed().subscribe((startingMax: number) => {
-      if (startingMax) {
-        this.clubProgressService.joinClubWithProgress(user.id, club.id, startingMax).subscribe({
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result && result.startingMax) {
+        // ✅ Eğer recommendation varsa, önerilen club'a join et
+        const targetClubId = result.recommendedClubId || club.id;
+
+        this.clubProgressService.joinClubWithProgress(user.id, targetClubId, result.startingMax).subscribe({
           next: () => {
-            this.snackBar.open(`Joined ${club.name}!`, 'Close', { duration: 3000 });
-            this.myClubIds.set([...this.myClubIds(), club.id]);
-            this.viewProgram(club);
+            const targetClub = this.clubs().find(c => c.id === targetClubId);
+            this.snackBar.open(`Joined ${targetClub?.name || club.name}!`, 'Close', { duration: 3000 });
+            this.myClubIds.set([...this.myClubIds(), targetClubId]);
+            this.viewProgram(targetClub || club);
           },
           error: (err) => {
             this.snackBar.open(err.error?.message || 'Failed to join club', 'Close', { duration: 3000 });

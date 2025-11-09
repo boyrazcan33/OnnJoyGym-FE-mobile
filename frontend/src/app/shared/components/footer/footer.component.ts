@@ -16,29 +16,21 @@ import { RouterLink } from '@angular/router';
 
         <div class="footer-links">
           <div class="link-group">
-            <h4>Product</h4>
-            <a routerLink="/gyms">Gyms</a>
-            <a routerLink="/leaderboard">Leaderboard</a>
-            <a routerLink="/clubs">Clubs</a>
-          </div>
-
-          <div class="link-group">
             <h4>Company</h4>
-            <a href="#">About</a>
-            <a href="#">Privacy</a>
-            <a href="#">Terms</a>
+            <a routerLink="/about">About</a>
+            <a routerLink="/privacy">Privacy</a>
+            <a routerLink="/terms">Terms</a>
           </div>
 
           <div class="link-group">
             <h4>Contact</h4>
             <a href="mailto:info@onjoygym.ee">Email</a>
-            <a href="tel:+372XXXXXXXX">Phone</a>
           </div>
         </div>
       </div>
 
       <div class="footer-bottom">
-        <p>&copy; 2024 OnnJoyGym. All rights reserved.</p>
+        <p>&copy; 2025 OnnJoyGym. All rights reserved.</p>
       </div>
     </footer>
   `,
@@ -52,7 +44,7 @@ import { RouterLink } from '@angular/router';
 
     .footer-content {
       display: grid;
-      grid-template-columns: 2fr 3fr;
+      grid-template-columns: 2fr 2fr;
       gap: 3rem;
       margin-bottom: 2rem;
     }
@@ -70,7 +62,7 @@ import { RouterLink } from '@angular/router';
 
     .footer-links {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 2rem;
     }
 

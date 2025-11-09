@@ -20,6 +20,18 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/email-verification/email-verification.component').then(m => m.EmailVerificationComponent)
   },
   {
+    path: 'about',
+    loadComponent: () => import('./features/legal/about/about.component').then(m => m.AboutComponent)
+  },
+  {
+    path: 'privacy',
+    loadComponent: () => import('./features/legal/privacy/privacy.component').then(m => m.PrivacyComponent)
+  },
+  {
+    path: 'terms',
+    loadComponent: () => import('./features/legal/terms/terms.component').then(m => m.TermsComponent)
+  },
+  {
     path: 'gyms',
     loadComponent: () => import('./features/gyms/gym-list/gym-list.component').then(m => m.GymListComponent)
   },
