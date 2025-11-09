@@ -25,7 +25,14 @@ import { AuthService } from '../../../core/services/auth.service';
     <mat-toolbar class="navbar">
       <div class="container navbar-content">
         <a routerLink="/" class="logo">
-          <span class="logo-text">💪 OnnJoyGym</span>
+          <video class="logo-video"
+                 src="/assets/videologo.mp4"
+                 autoplay
+                 loop
+                 muted
+                 playsinline>
+          </video>
+          <span class="logo-text">OnnJoyGym</span>
         </a>
 
         @if (authService.isAuthenticated()) {
@@ -87,15 +94,25 @@ import { AuthService } from '../../../core/services/auth.service';
     .logo {
       text-decoration: none;
       color: white;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .logo-video {
+      height: 2.25rem;
+      width: auto;
+      object-fit: contain;
     }
 
     .logo-text {
-      font-size: 1.5rem;
+      font-size: 2.25rem;
       font-weight: bold;
       background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      line-height: 1.2;
     }
 
     .nav-links {
