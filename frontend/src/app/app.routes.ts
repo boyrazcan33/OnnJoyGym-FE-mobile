@@ -16,6 +16,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/register/register.component').then(m => m.RegisterComponent)
   },
   {
+    path: 'verify-email',
+    loadComponent: () => import('./features/auth/email-verification/email-verification.component').then(m => m.EmailVerificationComponent)
+  },
+  {
     path: 'gyms',
     loadComponent: () => import('./features/gyms/gym-list/gym-list.component').then(m => m.GymListComponent)
   },

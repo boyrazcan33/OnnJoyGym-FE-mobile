@@ -13,20 +13,16 @@ import { MatCardModule } from '@angular/material/card';
     <div class="landing">
       <section class="hero">
         <div class="container hero-content">
-          <h1>Find Your Perfect Gym & Training Partner</h1>
-          <p>Expert gym reviews, buddy matching, competitions, and personalized workout programs.</p>
+          <h1>ELEVATE YOUR FITNESS. ACHIEVE YOUR POTENTIAL.</h1>
+          <p>Join Estonia's premier holistic fitness platform. Get accredited insights, find high-fidelity training partners, and earn recognition on verified leaderboards.</p>
           <div class="hero-actions">
             <button mat-raised-button color="primary" routerLink="/register">
-              <mat-icon>person_add</mat-icon>
-              Sign Up
+              <mat-icon>rocket_launch</mat-icon>
+              GET STARTED FREE
             </button>
             <button mat-raised-button color="accent" routerLink="/login">
               <mat-icon>login</mat-icon>
               Login
-            </button>
-            <button mat-stroked-button routerLink="/gyms">
-              <mat-icon>fitness_center</mat-icon>
-              Browse Gyms
             </button>
           </div>
         </div>
@@ -37,27 +33,27 @@ import { MatCardModule } from '@angular/material/card';
           <h2>Four Pillars of Fitness</h2>
           <div class="pillar-grid">
             <mat-card class="pillar-card">
-              <mat-icon>fitness_center</mat-icon>
-              <h3>Expert Gym Reviews</h3>
-              <p>Get honest reviews from NCAA-certified trainers. Know before you go.</p>
+              <mat-icon>verified</mat-icon>
+              <h3>Accredited Gym Intelligence</h3>
+              <p>Access unbiased, in-depth reviews from an NCAA Certified Strength Specialist. Make your membership decision with complete confidence, knowing the pros and cons.</p>
             </mat-card>
 
             <mat-card class="pillar-card">
               <mat-icon>groups</mat-icon>
-              <h3>Find Training Buddies</h3>
-              <p>Match with like-minded athletes. Train together, grow together.</p>
+              <h3>Precision Partner Matching</h3>
+              <p>Our algorithm matches you based on 5 key factors (goals, schedule, location, and social style), guaranteeing high compatibility for accelerated progress.</p>
             </mat-card>
 
             <mat-card class="pillar-card">
               <mat-icon>emoji_events</mat-icon>
-              <h3>Compete & Win</h3>
-              <p>Upload your lifts, climb the leaderboard, become the gym champion.</p>
+              <h3>Verified Leaderboard Supremacy</h3>
+              <p>Prove your strength with admin-approved, 3-rep video verification. Compete fairly, build credibility, and claim the top rank in your category.</p>
             </mat-card>
 
             <mat-card class="pillar-card">
               <mat-icon>assignment</mat-icon>
-              <h3>Custom Programs</h3>
-              <p>Join clubs and get personalized workout programs for your goals.</p>
+              <h3>Adaptive Strength Clubs</h3>
+              <p>Enroll in goal-focused, progressive programs (e.g., 100kg Bench). Your plan is instantly personalized with recommended weights based on your starting max.</p>
             </mat-card>
           </div>
         </div>
@@ -69,38 +65,38 @@ import { MatCardModule } from '@angular/material/card';
           <div class="features-grid">
             <div class="feature-item">
               <mat-icon>verified</mat-icon>
-              <h4>Verified Reviews</h4>
-              <p>All gym reviews are written by certified fitness professionals</p>
+              <h4>Unmatched Expertise</h4>
+              <p>Content and programs designed or vetted by an 11-Year NCAA Accredited Strength Specialist. You receive a professional-grade strategic advantage.</p>
             </div>
 
             <div class="feature-item">
               <mat-icon>psychology</mat-icon>
-              <h4>Smart Matching</h4>
-              <p>AI-powered algorithm finds your perfect training partner</p>
+              <h4>Algorithmic Compatibility</h4>
+              <p>Our match engine uses five key inputs (including goal, gym, and behavior) to calculate a percentage-based compatibility score (0-100).</p>
             </div>
 
             <div class="feature-item">
               <mat-icon>leaderboard</mat-icon>
-              <h4>Real Competition</h4>
-              <p>Video-verified lifts ensure fair and honest competition</p>
+              <h4>Integrity of Lifts</h4>
+              <p>Every lift submission must adhere to a strict 3-rep standard (fixed in database and frontend validation) and is subject to manual admin approval for fairness.</p>
             </div>
 
             <div class="feature-item">
               <mat-icon>trending_up</mat-icon>
-              <h4>Track Progress</h4>
-              <p>Monitor your weekly progress through club programs</p>
+              <h4>Personalized Progression</h4>
+              <p>Club programs instantly calculate your target working sets based on a percentage of your "Starting Max," ensuring continuous, safe, and effective progressive overload.</p>
             </div>
 
             <div class="feature-item">
               <mat-icon>telegram</mat-icon>
-              <h4>Direct Contact</h4>
-              <p>Connect with buddies via Telegram instantly</p>
+              <h4>Secure Peer Connection</h4>
+              <p>For privacy, the system only shares your Telegram username once a buddy request is mutually accepted, preventing unwanted contact.</p>
             </div>
 
             <div class="feature-item">
               <mat-icon>location_on</mat-icon>
-              <h4>Local Focus</h4>
-              <p>Find gyms and partners in your area</p>
+              <h4>Tallinn Focused Network</h4>
+              <p>An actively maintained database of 46 local gym locations (Tallinn, Viimsi, etc.) ensures hyper-local buddy and review relevance.</p>
             </div>
           </div>
         </div>
@@ -114,8 +110,8 @@ import { MatCardModule } from '@angular/material/card';
               <p>Active Users</p>
             </div>
             <div class="stat-item">
-              <h3>10+</h3>
-              <p>Partner Gyms</p>
+              <h3>46</h3>
+              <p>Gym Locations</p>
             </div>
             <div class="stat-item">
               <h3>50+</h3>
@@ -131,8 +127,8 @@ import { MatCardModule } from '@angular/material/card';
 
       <section class="cta">
         <div class="container cta-content">
-          <h2>Ready to Transform Your Training?</h2>
-          <p>Join hundreds of athletes in Estonia's premier fitness community</p>
+          <h2>READY TO COMMIT TO WORLD-CLASS RESULTS?</h2>
+          <p>Stop wishing for results and start executing a verifiable plan. Join the community where accountability meets measured achievement.</p>
           <div class="cta-buttons">
             <button mat-raised-button color="primary" routerLink="/register">
               <mat-icon>rocket_launch</mat-icon>
@@ -160,12 +156,16 @@ import { MatCardModule } from '@angular/material/card';
         font-size: 3rem;
         margin-bottom: 1rem;
         font-weight: 700;
+        letter-spacing: 1px;
       }
 
       p {
         font-size: 1.25rem;
         margin-bottom: 2rem;
         color: rgba(255,255,255,0.9);
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
       }
     }
 
@@ -233,6 +233,7 @@ import { MatCardModule } from '@angular/material/card';
 
       p {
         color: #666;
+        line-height: 1.6;
       }
     }
 
@@ -283,6 +284,7 @@ import { MatCardModule } from '@angular/material/card';
         margin: 0;
         color: #666;
         font-size: 0.875rem;
+        line-height: 1.6;
       }
     }
 
@@ -323,11 +325,15 @@ import { MatCardModule } from '@angular/material/card';
       h2 {
         font-size: 2.5rem;
         margin-bottom: 1rem;
+        letter-spacing: 1px;
       }
 
       p {
         font-size: 1.25rem;
         margin-bottom: 2rem;
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
       }
     }
 

@@ -75,8 +75,13 @@ import { AuthService } from '../../../core/services/auth.service';
                 <mat-error>Telegram username is required</mat-error>
               }
               @if (telegramControl.hasError('pattern') && !telegramControl.hasError('required')) {
-                <mat-error>Must start with &#64; and be 5-32 characters</mat-error>              }
+                <mat-error>Must start with &#64; and be 5-32 characters</mat-error>
+              }
             </mat-form-field>
+
+            <div class="email-notice">
+              <p>📧 A verification email will be sent to your email address</p>
+            </div>
 
             <button mat-raised-button color="primary" type="submit" [disabled]="loading">
               {{ loading ? 'Creating account...' : 'Sign Up' }}
@@ -117,6 +122,20 @@ import { AuthService } from '../../../core/services/auth.service';
 
     mat-form-field {
       width: 100%;
+    }
+
+    .email-notice {
+      padding: 0.75rem;
+      background: #fff3cd;
+      border-radius: 8px;
+      margin: 0.5rem 0;
+
+      p {
+        margin: 0;
+        color: #856404;
+        font-size: 0.875rem;
+        text-align: center;
+      }
     }
 
     button[type="submit"] {
@@ -189,7 +208,7 @@ export class RegisterComponent {
 
     this.authService.register(registerData).subscribe({
       next: () => {
-        this.snackBar.open('Account created successfully!', 'Close', { duration: 3000 });
+        this.snackBar.open('Account created! Please check your email for verification link.', 'Close', { duration: 5000 });
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {
