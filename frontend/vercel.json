@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/frontend_onnjoy/browser",
+  "framework": "angular",
+  "env": {
+    "API_URL": "https://container-service-1.hhch09e6dve6t.eu-north-1.cs.amazonlightsail.com/api"
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

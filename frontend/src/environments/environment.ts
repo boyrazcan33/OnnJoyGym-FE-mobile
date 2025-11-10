@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'http://localhost:8080/api'
+  apiUrl: 'https://container-service-1.hhch09e6dve6t.eu-north-1.cs.amazonlightsail.com/api'  //  Cloud backend
 };

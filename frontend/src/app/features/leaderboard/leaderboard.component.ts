@@ -10,8 +10,14 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatButtonModule } from '@angular/material/button';
 import { LeaderboardService } from '../../core/services/leaderboard.service';
 import { GymService } from '../../core/services/gym.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Leaderboard } from '../../models/leaderboard.model';
 import { Gym } from '../../models/gym.model';
+
+interface CategoryOption {
+  value: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-leaderboard',
@@ -51,10 +57,9 @@ import { Gym } from '../../models/gym.model';
               <mat-label>Category</mat-label>
               <mat-select [(value)]="selectedCategory" (selectionChange)="loadLeaderboard()">
                 <mat-option [value]="null">All Categories</mat-option>
-                <mat-option value="BENCH_PRESS">Bench Press</mat-option>
-                <mat-option value="SQUAT">Squat</mat-option>
-                <mat-option value="DEADLIFT">Deadlift</mat-option>
-                <mat-option value="PULL_UP">Pull Up</mat-option>
+                @for (category of getAllCategories(); track category.value) {
+                  <mat-option [value]="category.value">{{ category.label }}</mat-option>
+                }
               </mat-select>
             </mat-form-field>
 
@@ -313,6 +318,7 @@ import { Gym } from '../../models/gym.model';
 export class LeaderboardComponent implements OnInit {
   private leaderboardService = inject(LeaderboardService);
   private gymService = inject(GymService);
+  private authService = inject(AuthService);
 
   gyms = signal<Gym[]>([]);
   leaderboard = signal<Leaderboard[]>([]);
@@ -324,6 +330,23 @@ export class LeaderboardComponent implements OnInit {
 
   displayedColumns: string[] = ['rank', 'user', 'category', 'weight', 'gym', 'date', 'actions'];
 
+  // Gender-based categories (matching backend exactly)
+  private readonly MALE_CATEGORIES: CategoryOption[] = [
+    { value: 'BENCH_PRESS', label: 'Bench Press' },
+    { value: 'SQUAT', label: 'Squat' },
+    { value: 'DEADLIFT', label: 'Deadlift' },
+    { value: 'HAMMER_CURL', label: 'Hammer Curl' },
+    { value: 'WIDE_GRIP_LAT_PULLDOWN', label: 'Wide Grip Lat Pulldown' }
+  ];
+
+  private readonly FEMALE_CATEGORIES: CategoryOption[] = [
+    { value: 'BENCH_PRESS', label: 'Bench Press' },
+    { value: 'SQUAT', label: 'Squat' },
+    { value: 'DEADLIFT', label: 'Deadlift' },
+    { value: 'HIP_THRUST', label: 'Hip Thrust' },
+    { value: 'BARBELL_LUNGE', label: 'Barbell Lunge' }
+  ];
+
   ngOnInit(): void {
     this.loadGyms();
     this.loadLeaderboard();
@@ -331,6 +354,26 @@ export class LeaderboardComponent implements OnInit {
 
   loadGyms(): void {
     this.gymService.getAll().subscribe(gyms => this.gyms.set(gyms));
+  }
+
+  getAllCategories(): CategoryOption[] {
+    // Combine all unique categories from both genders
+    const allCategories = new Map<string, string>();
+
+    // Add male categories
+    this.MALE_CATEGORIES.forEach(cat => {
+      allCategories.set(cat.value, cat.label);
+    });
+
+    // Add female categories
+    this.FEMALE_CATEGORIES.forEach(cat => {
+      allCategories.set(cat.value, cat.label);
+    });
+
+    // Convert back to CategoryOption array, sorted by label
+    return Array.from(allCategories.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }
 
   loadLeaderboard(): void {
@@ -385,7 +428,14 @@ export class LeaderboardComponent implements OnInit {
   }
 
   formatCategory(category: string): string {
-    return category.split('_').map(word =>
+    // Use the same categories mapping for consistent display
+    const categoryMap = new Map<string, string>();
+
+    [...this.MALE_CATEGORIES, ...this.FEMALE_CATEGORIES].forEach(cat => {
+      categoryMap.set(cat.value, cat.label);
+    });
+
+    return categoryMap.get(category) || category.split('_').map(word =>
       word.charAt(0) + word.slice(1).toLowerCase()
     ).join(' ');
   }

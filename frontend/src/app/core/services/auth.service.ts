@@ -1,5 +1,5 @@
-import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core'; // PLATFORM_ID eklendi
-import { isPlatformBrowser } from '@angular/common'; // isPlatformBrowser eklendi
+import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
@@ -11,17 +11,26 @@ import { User } from '../../models/user.model';
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
-  private platformId = inject(PLATFORM_ID); // Platform ID enjekte edildi
-  private isBrowser = isPlatformBrowser(this.platformId); // Tarayıcı olup olmadığı kontrol edildi
+  private platformId = inject(PLATFORM_ID);
+  private isBrowser = isPlatformBrowser(this.platformId);
 
   isAuthenticated = signal(false);
   currentUser = signal<User | null>(null);
 
   constructor() {
-    if (this.isBrowser) { // Yalnızca tarayıcı ortamında çalıştır
+    if (this.isBrowser) {
       const token = this.getToken();
-      if (token) {
-        this.isAuthenticated.set(true);
+      const userString = localStorage.getItem('user');
+      if (token && userString) {
+        try {
+          const user = JSON.parse(userString);
+          this.isAuthenticated.set(true);
+          this.currentUser.set(user);
+        } catch (e) {
+          // Clear invalid data
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
       }
     }
   }
@@ -37,7 +46,7 @@ export class AuthService {
   }
 
   logout(): void {
-    if (this.isBrowser) { // Yalnızca tarayıcı ortamında localStorage'a eriş
+    if (this.isBrowser) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     }
@@ -47,8 +56,7 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    if (this.isBrowser) { // Yalnızca tarayıcı ortamında localStorage'a eriş
-      // Not: Bu logic, önceki hatalı club.service.ts dosyasından alınan platform kontrolü ile birleştirilmiştir.
+    if (this.isBrowser) {
       return localStorage.getItem('token');
     }
     return null;
@@ -64,11 +72,13 @@ export class AuthService {
       localStorage.setItem('token', response.token);
       this.isAuthenticated.set(true);
 
+      // Create user object with proper ID from backend response
       const user: User = {
-        id: 0,
+        id: response.userId,  // Use the actual userId from backend
         email: response.email,
         role: response.role,
-        isActivated: false, // Varsayılan değer
+        gender: undefined,  // Will be loaded from profile API when needed
+        isActivated: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };

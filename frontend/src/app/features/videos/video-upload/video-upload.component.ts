@@ -14,7 +14,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { VideoService } from '../../../core/services/video.service';
 import { GymService } from '../../../core/services/gym.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { UserService } from '../../../core/services/user.service';
 import { Gym } from '../../../models/gym.model';
+
+interface CategoryOption {
+  value: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-video-upload',
@@ -45,10 +51,9 @@ import { Gym } from '../../../models/gym.model';
               <mat-form-field appearance="outline">
                 <mat-label>Category</mat-label>
                 <mat-select formControlName="category" required>
-                  <mat-option value="BENCH_PRESS">Bench Press</mat-option>
-                  <mat-option value="SQUAT">Squat</mat-option>
-                  <mat-option value="DEADLIFT">Deadlift</mat-option>
-                  <mat-option value="PULL_UP">Pull Up</mat-option>
+                  @for (category of getAvailableCategories(); track category.value) {
+                    <mat-option [value]="category.value">{{ category.label }}</mat-option>
+                  }
                 </mat-select>
                 @if (form.get('category')!.hasError('required') && form.get('category')?.touched) {
                   <mat-error>Category is required</mat-error>
@@ -255,6 +260,7 @@ export class VideoUploadComponent implements OnInit {
   private videoService = inject(VideoService);
   private gymService = inject(GymService);
   private authService = inject(AuthService);
+  private userService = inject(UserService);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
 
@@ -264,18 +270,58 @@ export class VideoUploadComponent implements OnInit {
   uploadStatus = signal<{ type: string; icon: string; message: string } | null>(null);
   uploading = false;
 
+  // Gender-based categories (matching backend)
+  private readonly MALE_CATEGORIES: CategoryOption[] = [
+    { value: 'BENCH_PRESS', label: 'Bench Press' },
+    { value: 'SQUAT', label: 'Squat' },
+    { value: 'DEADLIFT', label: 'Deadlift' },
+    { value: 'HAMMER_CURL', label: 'Hammer Curl' },
+    { value: 'WIDE_GRIP_LAT_PULLDOWN', label: 'Wide Grip Lat Pulldown' }
+  ];
+
+  private readonly FEMALE_CATEGORIES: CategoryOption[] = [
+    { value: 'BENCH_PRESS', label: 'Bench Press' },
+    { value: 'SQUAT', label: 'Squat' },
+    { value: 'DEADLIFT', label: 'Deadlift' },
+    { value: 'HIP_THRUST', label: 'Hip Thrust' },
+    { value: 'BARBELL_LUNGE', label: 'Barbell Lunge' }
+  ];
+
   form = this.fb.group({
     category: ['', Validators.required],
     weight: [null as number | null, [Validators.required, Validators.min(1), Validators.max(500)]],
     gymId: [null as number | null, Validators.required]
   });
 
+  userGender = signal<string>('MALE'); // Default fallback
+
   ngOnInit(): void {
     this.loadGyms();
+    this.loadUserProfile();
   }
 
   loadGyms(): void {
     this.gymService.getAll().subscribe(gyms => this.gyms.set(gyms));
+  }
+
+  loadUserProfile(): void {
+    const currentUser = this.authService.currentUser();
+    if (currentUser) {
+      this.userService.getProfile(currentUser.id).subscribe({
+        next: (user) => {
+          this.userGender.set(user.gender || 'MALE');
+        },
+        error: () => {
+          // Fallback to MALE if profile load fails
+          this.userGender.set('MALE');
+        }
+      });
+    }
+  }
+
+  getAvailableCategories(): CategoryOption[] {
+    const gender = this.userGender();
+    return gender === 'FEMALE' ? this.FEMALE_CATEGORIES : this.MALE_CATEGORIES;
   }
 
   onFileSelected(event: any): void {
