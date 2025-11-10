@@ -2,7 +2,7 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { HttpClient, HttpEventType } from '@angular/common/http';
+import { HttpClient, HttpEventType, HttpHeaders } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -87,10 +87,10 @@ interface CategoryOption {
               </mat-form-field>
 
               <div class="file-input">
-                <input type="file" #fileInput (change)="onFileSelected($event)" accept="video/mp4" hidden>
+                <input type="file" #fileInput (change)="onFileSelected($event)" accept="video/mp4,video/mov,video/avi" hidden>
                 <button type="button" mat-stroked-button (click)="fileInput.click()">
                   <mat-icon>videocam</mat-icon>
-                  {{ selectedFile() ? selectedFile()!.name : 'Choose Video (MP4 only)' }}
+                  {{ selectedFile() ? selectedFile()!.name : 'Choose Video (MP4, MOV, AVI)' }}
                 </button>
                 @if (selectedFile()) {
                   <span class="file-size">{{ getFileSize() }}</span>
@@ -100,7 +100,7 @@ interface CategoryOption {
               <div class="requirements">
                 <h4>Requirements:</h4>
                 <ul>
-                  <li>Video must be MP4 format</li>
+                  <li>Video must be MP4, MOV, or AVI format</li>
                   <li>Must show exactly 3 reps</li>
                   <li>Full range of motion visible</li>
                   <li>No inappropriate content</li>
@@ -293,7 +293,7 @@ export class VideoUploadComponent implements OnInit {
     gymId: [null as number | null, Validators.required]
   });
 
-  userGender = signal<string>('MALE'); // Default fallback
+  userGender = signal<string>('MALE');
 
   ngOnInit(): void {
     this.loadGyms();
@@ -312,7 +312,6 @@ export class VideoUploadComponent implements OnInit {
           this.userGender.set(user.gender || 'MALE');
         },
         error: () => {
-          // Fallback to MALE if profile load fails
           this.userGender.set('MALE');
         }
       });
@@ -327,8 +326,9 @@ export class VideoUploadComponent implements OnInit {
   onFileSelected(event: any): void {
     const file = event.target.files[0];
     if (file) {
-      if (!file.type.includes('mp4')) {
-        this.snackBar.open('Only MP4 format is accepted', 'Close', { duration: 3000 });
+      const validFormats = ['video/mp4', 'video/quicktime', 'video/x-msvideo'];
+      if (!validFormats.includes(file.type)) {
+        this.snackBar.open('Only MP4, MOV, and AVI formats are accepted', 'Close', { duration: 3000 });
         return;
       }
       this.selectedFile.set(file);
@@ -365,10 +365,11 @@ export class VideoUploadComponent implements OnInit {
       reps: 3
     };
 
-    // Step 1: Get pre-signed URL
+    // Step 1: Get pre-signed URL from backend
     this.videoService.getUploadUrl(uploadData).subscribe({
       next: (response) => {
-        // Step 2: Upload to S3
+        console.log('✅ Upload URL received:', response.uploadUrl);
+        // Step 2: Upload directly to S3 using PUT
         this.uploadToS3(response.uploadUrl, this.selectedFile()!);
       },
       error: (err) => {
@@ -382,43 +383,56 @@ export class VideoUploadComponent implements OnInit {
     });
   }
 
-  private uploadToS3(url: string, file: File): void {
-    this.http.put(url, file, {
+  private uploadToS3(presignedUrl: string, file: File): void {
+    // ✅ CRITICAL: Detect correct content type
+    let contentType = 'video/mp4'; // default
+    if (file.type) {
+      contentType = file.type;
+    } else if (file.name.toLowerCase().endsWith('.mov')) {
+      contentType = 'video/quicktime';
+    } else if (file.name.toLowerCase().endsWith('.avi')) {
+      contentType = 'video/x-msvideo';
+    }
+
+    console.log('📤 Uploading file:', file.name, 'Type:', contentType);
+
+    // ✅ Create headers WITHOUT any AWS signature headers
+    const headers = new HttpHeaders({
+      'Content-Type': contentType
+    });
+
+    // ✅ Use PUT method to upload directly to S3
+    this.http.put(presignedUrl, file, {
+      headers: headers,
       reportProgress: true,
       observe: 'events',
-      headers: {
-        'Content-Type': 'video/mp4'
-      }
+      responseType: 'text' // S3 returns XML, not JSON
     }).subscribe({
       next: (event) => {
         if (event.type === HttpEventType.UploadProgress) {
           const progress = Math.round(100 * event.loaded / (event.total || 1));
           this.uploadProgress.set(progress);
+          console.log(`📊 Upload progress: ${progress}%`);
         } else if (event.type === HttpEventType.Response) {
           // Upload complete
+          console.log('✅ Upload complete!');
           this.uploadProgress.set(100);
+          this.uploading = false;
+
           this.uploadStatus.set({
             type: 'success',
             icon: 'check_circle',
-            message: '✅ Video uploaded! Checking content...'
+            message: '✅ Video uploaded successfully! Awaiting admin review.'
           });
 
-          // Wait 15-30 seconds before showing final status
           setTimeout(() => {
-            this.uploadStatus.set({
-              type: 'info',
-              icon: 'info',
-              message: '⏳ Awaiting admin review for technique validation'
-            });
-
-            setTimeout(() => {
-              this.snackBar.open('Video uploaded successfully! Waiting for admin approval.', 'Close', { duration: 3000 });
-              this.router.navigate(['/dashboard']);
-            }, 2000);
-          }, 3000);
+            this.snackBar.open('Video uploaded! Waiting for admin approval.', 'Close', { duration: 3000 });
+            this.router.navigate(['/dashboard']);
+          }, 2000);
         }
       },
-      error: () => {
+      error: (error) => {
+        console.error('❌ Upload failed:', error);
         this.uploading = false;
         this.uploadProgress.set(0);
         this.uploadStatus.set({
@@ -426,6 +440,11 @@ export class VideoUploadComponent implements OnInit {
           icon: 'error',
           message: '❌ Upload failed. Please try again.'
         });
+
+        // Show detailed error
+        if (error.error) {
+          console.error('Error details:', error.error);
+        }
       }
     });
   }
