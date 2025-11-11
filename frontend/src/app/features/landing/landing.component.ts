@@ -127,16 +127,12 @@ import { MatCardModule } from '@angular/material/card';
 
       <section class="cta">
         <div class="container cta-content">
-          <h2>READY TO COMMIT TO WORLD-CLASS RESULTS?</h2>
-          <p>Stop wishing for results and start executing a verifiable plan. Join the community where accountability meets measured achievement.</p>
+          <h2>JOIN A COMMUNITY OF VERIFIABLE STRENGTH.</h2>
+          <p>This isn't just another fitness app. It's the holistic platform designed to find high-compatibility partners, join adaptive strength clubs, and prove your results on a leaderboard built on integrity.</p>
           <div class="cta-buttons">
             <button mat-raised-button color="primary" routerLink="/register">
               <mat-icon>rocket_launch</mat-icon>
               Get Started Free
-            </button>
-            <button mat-stroked-button routerLink="/leaderboard">
-              <mat-icon>emoji_events</mat-icon>
-              View Leaderboard
             </button>
           </div>
         </div>
