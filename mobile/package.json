@@ -1,0 +1,28 @@
+{
+  "name": "onnjoy-mobile",
+  "version": "1.0.0",
+  "description": "OnnJoyGym mobile app powered by Capacitor",
+  "scripts": {
+    "dev": "npm run sync && cap open ios",
+    "sync": "cap sync",
+    "build": "cd ../frontend && npm run build && cd ../mobile && npm run sync",
+    "ios": "cap open ios",
+    "android": "cap open android",
+    "add:ios": "cap add ios",
+    "add:android": "cap add android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/app": "^6.0.1",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/haptics": "^6.0.1",
+    "@capacitor/ios": "^6.1.2",
+    "@capacitor/keyboard": "^6.0.2",
+    "@capacitor/status-bar": "^6.0.1",
+    "@capacitor/splash-screen": "^6.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2",
+    "typescript": "~5.5.2"
+  }
+}

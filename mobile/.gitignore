@@ -1,0 +1,21 @@
+# Capacitor
+.capacitor
+android/
+ios/
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

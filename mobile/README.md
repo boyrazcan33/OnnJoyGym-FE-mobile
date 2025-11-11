@@ -2,43 +2,79 @@
 
 Capacitor-based mobile application that wraps the Angular frontend for iOS and Android.
 
-## Setup Plan (3-day timeline)
+## Quick Start
 
-### Day 1: Capacitor Foundation
-- [ ] Initialize Capacitor project
-- [ ] Configure build pipeline to use `../frontend/dist/`
-- [ ] Basic iOS/Android project setup
-- [ ] Test basic app shell
-
-### Day 2: Mobile Features
-- [ ] Configure native plugins (camera, geolocation, push notifications)
-- [ ] Mobile-specific UI adjustments
-- [ ] Test on device/simulator
-- [ ] Performance optimization
-
-### Day 3: Polish & Deploy
-- [ ] App icons and splash screens
-- [ ] Build for production
-- [ ] Test deployment pipeline
-- [ ] Documentation
-
-## Fallback: PWA Enhancement
-If Capacitor timeline isn't met, enhance frontend with:
-- Service worker for offline support
-- Web app manifest for installability
-- Push notification setup (web)
-
-## Commands (TBD)
+### 1. Install Dependencies
 ```bash
-npm run dev          # Development with live reload
-npm run build        # Build for production
-npm run ios          # Run on iOS simulator
-npm run android      # Run on Android emulator
+cd mobile
+npm install
 ```
 
-## Dependencies (TBD)
-- @capacitor/core
-- @capacitor/cli
-- @capacitor/ios
-- @capacitor/android
-- Native plugins as needed
+### 2. Build Frontend
+```bash
+cd ../frontend
+npm run build
+cd ../mobile
+```
+
+### 3. Add Platforms
+```bash
+# Add iOS (requires macOS with Xcode)
+npm run add:ios
+
+# Add Android (requires Android Studio)
+npm run add:android
+```
+
+### 4. Sync and Open
+```bash
+# Sync web assets and open iOS
+npm run ios
+
+# Or open Android
+npm run android
+```
+
+## Available Commands
+
+```bash
+npm run build        # Build frontend and sync to mobile
+npm run sync         # Sync web assets to native projects
+npm run ios          # Open iOS project in Xcode
+npm run android      # Open Android project in Android Studio
+npm run dev          # Quick sync and open iOS
+```
+
+## Configuration
+
+- **App ID:** com.onnjoy.gym
+- **App Name:** OnnJoy
+- **Web Directory:** ../frontend/dist/frontend_onnjoy/browser
+
+## Plugins Included
+
+- @capacitor/app - App state and URL handling
+- @capacitor/haptics - Haptic feedback
+- @capacitor/keyboard - Keyboard control
+- @capacitor/status-bar - Status bar styling
+- @capacitor/splash-screen - Splash screen management
+
+## Development Workflow
+
+1. Make changes to Angular app in `../frontend`
+2. Run `npm run build` from mobile directory
+3. Test in simulator/device using `npm run ios` or `npm run android`
+
+## Requirements
+
+- **iOS:** macOS with Xcode 14+
+- **Android:** Android Studio with SDK 22+
+- **Node:** 18+ (same as frontend)
+
+## Next Steps
+
+- [ ] Add app icons and splash screens
+- [ ] Configure push notifications
+- [ ] Add camera/geolocation plugins as needed
+- [ ] Test on physical devices
+- [ ] Configure code signing for distribution
