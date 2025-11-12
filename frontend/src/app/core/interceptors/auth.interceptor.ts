@@ -1,5 +1,6 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { from, switchMap } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
@@ -16,15 +17,17 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
-  // For all other requests, add JWT token
-  const token = authService.getToken();
-  if (token) {
-    req = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
+  // For all other requests, add JWT token (async)
+  return from(authService.getToken()).pipe(
+    switchMap(token => {
+      if (token) {
+        req = req.clone({
+          setHeaders: {
+            Authorization: `Bearer ${token}`
+          }
+        });
       }
-    });
-  }
-
-  return next(req);
+      return next(req);
+    })
+  );
 };

@@ -9,6 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/services/auth.service';
+import { BackButtonComponent } from '../../../shared/components/back-button/back-button.component';
 
 @Component({
   selector: 'app-register',
@@ -22,10 +23,14 @@ import { AuthService } from '../../../core/services/auth.service';
     MatInputModule,
     MatSelectModule,
     MatButtonModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    BackButtonComponent
   ],
   template: `
     <div class="auth-container">
+      <div class="back-button-wrapper">
+        <app-back-button [fallbackRoute]="'/'"></app-back-button>
+      </div>
       <mat-card class="auth-card">
         <mat-card-header>
           <mat-card-title>Create Account</mat-card-title>
@@ -103,6 +108,14 @@ import { AuthService } from '../../../core/services/auth.service';
       justify-content: center;
       padding: 2rem;
       background: linear-gradient(135deg, var(--secondary) 0%, var(--dark) 100%);
+      position: relative;
+    }
+
+    .back-button-wrapper {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      z-index: 10;
     }
 
     .auth-card {

@@ -6,11 +6,13 @@ import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { LoginRequest, RegisterRequest, AuthResponse } from '../../models/auth.model';
 import { User } from '../../models/user.model';
+import { StorageService } from './storage.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private storage = inject(StorageService);
   private platformId = inject(PLATFORM_ID);
   private isBrowser = isPlatformBrowser(this.platformId);
 
@@ -19,18 +21,22 @@ export class AuthService {
 
   constructor() {
     if (this.isBrowser) {
-      const token = this.getToken();
-      const userString = localStorage.getItem('user');
-      if (token && userString) {
-        try {
-          const user = JSON.parse(userString);
-          this.isAuthenticated.set(true);
-          this.currentUser.set(user);
-        } catch (e) {
-          // Clear invalid data
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-        }
+      this.initializeAuth();
+    }
+  }
+
+  private async initializeAuth(): Promise<void> {
+    const token = await this.getToken();
+    const userString = await this.storage.getItem('user');
+    if (token && userString) {
+      try {
+        const user = JSON.parse(userString);
+        this.isAuthenticated.set(true);
+        this.currentUser.set(user);
+      } catch (e) {
+        // Clear invalid data
+        await this.storage.removeItem('token');
+        await this.storage.removeItem('user');
       }
     }
   }
@@ -45,19 +51,19 @@ export class AuthService {
       .pipe(tap(res => this.handleAuth(res)));
   }
 
-  logout(): void {
+  async logout(): Promise<void> {
     if (this.isBrowser) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      await this.storage.removeItem('token');
+      await this.storage.removeItem('user');
     }
     this.isAuthenticated.set(false);
     this.currentUser.set(null);
     this.router.navigate(['/login']);
   }
 
-  getToken(): string | null {
+  async getToken(): Promise<string | null> {
     if (this.isBrowser) {
-      return localStorage.getItem('token');
+      return await this.storage.getItem('token');
     }
     return null;
   }
@@ -67,9 +73,9 @@ export class AuthService {
     return user?.role === 'ADMIN';
   }
 
-  private handleAuth(response: AuthResponse): void {
+  private async handleAuth(response: AuthResponse): Promise<void> {
     if (this.isBrowser) {
-      localStorage.setItem('token', response.token);
+      await this.storage.setItem('token', response.token);
       this.isAuthenticated.set(true);
 
       // Create user object with proper ID from backend response
@@ -83,7 +89,7 @@ export class AuthService {
         updatedAt: new Date().toISOString()
       };
 
-      localStorage.setItem('user', JSON.stringify(user));
+      await this.storage.setItem('user', JSON.stringify(user));
       this.currentUser.set(user);
     }
   }

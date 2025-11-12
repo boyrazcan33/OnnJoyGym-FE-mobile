@@ -8,6 +8,9 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
     iosScheme: 'https'
   },
+  ios: {
+    contentInset: 'always'
+  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
