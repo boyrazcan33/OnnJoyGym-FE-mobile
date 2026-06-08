@@ -1,9 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-landing',
@@ -16,14 +17,21 @@ import { MatCardModule } from '@angular/material/card';
           <h1>ELEVATE YOUR FITNESS. ACHIEVE YOUR POTENTIAL.</h1>
           <p>Join Estonia's premier holistic fitness platform. Get accredited insights, find high-fidelity training partners, and earn recognition on verified leaderboards.</p>
           <div class="hero-actions">
-            <button mat-raised-button color="primary" routerLink="/register">
-              <mat-icon>rocket_launch</mat-icon>
-              GET STARTED FREE
-            </button>
-            <button mat-raised-button color="accent" routerLink="/login">
-              <mat-icon>login</mat-icon>
-              Login
-            </button>
+            @if (!authService.isAuthenticated()) {
+              <button mat-raised-button color="primary" routerLink="/register">
+                <mat-icon>rocket_launch</mat-icon>
+                GET STARTED FREE
+              </button>
+              <button mat-raised-button color="accent" routerLink="/login">
+                <mat-icon>login</mat-icon>
+                Login
+              </button>
+            } @else {
+              <button mat-raised-button color="primary" routerLink="/dashboard">
+                <mat-icon>dashboard</mat-icon>
+                GO TO DASHBOARD
+              </button>
+            }
           </div>
         </div>
       </section>
@@ -130,10 +138,17 @@ import { MatCardModule } from '@angular/material/card';
           <h2>JOIN A COMMUNITY OF VERIFIABLE STRENGTH.</h2>
           <p>This isn't just another fitness app. It's the holistic platform designed to find high-compatibility partners, join adaptive strength clubs, and prove your results on a leaderboard built on integrity.</p>
           <div class="cta-buttons">
-            <button mat-raised-button color="primary" routerLink="/register">
-              <mat-icon>rocket_launch</mat-icon>
-              Get Started Free
-            </button>
+            @if (!authService.isAuthenticated()) {
+              <button mat-raised-button color="primary" routerLink="/register">
+                <mat-icon>rocket_launch</mat-icon>
+                Get Started Free
+              </button>
+            } @else {
+              <button mat-raised-button color="primary" routerLink="/dashboard">
+                <mat-icon>dashboard</mat-icon>
+                Go to Dashboard
+              </button>
+            }
           </div>
         </div>
       </section>
@@ -413,4 +428,6 @@ import { MatCardModule } from '@angular/material/card';
     }
   `]
 })
-export class LandingComponent {}
+export class LandingComponent {
+  authService = inject(AuthService);
+}

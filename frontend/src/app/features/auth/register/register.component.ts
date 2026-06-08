@@ -35,6 +35,24 @@ import { AuthService } from '../../../core/services/auth.service';
         <mat-card-content>
           <form [formGroup]="form" (ngSubmit)="onSubmit()">
             <mat-form-field appearance="outline">
+              <mat-label>Username</mat-label>
+              <input matInput formControlName="username" placeholder="e.g. john_doe" required>
+              <mat-hint>Letters, numbers, underscores — 3 to 50 characters</mat-hint>
+              @if (usernameControl.hasError('required') && usernameControl.touched) {
+                <mat-error>Username is required</mat-error>
+              }
+              @if (usernameControl.hasError('minlength') && !usernameControl.hasError('required')) {
+                <mat-error>At least 3 characters required</mat-error>
+              }
+              @if (usernameControl.hasError('maxlength')) {
+                <mat-error>Cannot exceed 50 characters</mat-error>
+              }
+              @if (usernameControl.hasError('pattern') && !usernameControl.hasError('required')) {
+                <mat-error>Only letters, numbers, and underscores allowed</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
               <mat-label>Email</mat-label>
               <input matInput type="email" formControlName="email" required>
               @if (emailControl.hasError('required') && emailControl.touched) {
@@ -169,11 +187,16 @@ export class RegisterComponent {
   loading = false;
 
   form = this.fb.group({
+    username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50), Validators.pattern(/^[a-zA-Z0-9_]+$/)]],
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]],
     gender: ['', Validators.required],
     telegramUsername: ['', [Validators.required, Validators.pattern(/^@[a-zA-Z0-9_]{5,32}$/)]]
   });
+
+  get usernameControl() {
+    return this.form.controls.username;
+  }
 
   get emailControl() {
     return this.form.controls.email;
@@ -200,6 +223,7 @@ export class RegisterComponent {
     this.loading = true;
 
     const registerData = {
+      username: this.form.value.username!,
       email: this.form.value.email!,
       password: this.form.value.password!,
       gender: this.form.value.gender!,
@@ -208,6 +232,7 @@ export class RegisterComponent {
 
     this.authService.register(registerData).subscribe({
       next: () => {
+        this.loading = false;
         this.snackBar.open('Account created! Please check your email for verification link.', 'Close', { duration: 5000 });
         this.router.navigate(['/dashboard']);
       },

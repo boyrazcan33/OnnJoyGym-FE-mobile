@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
+import { Injectable, inject, signal, computed, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -16,20 +16,25 @@ export class AuthService {
 
   isAuthenticated = signal(false);
   currentUser = signal<User | null>(null);
+  isAdmin = computed(() => this.currentUser()?.role === 'ADMIN');
 
   constructor() {
     if (this.isBrowser) {
       const token = this.getToken();
       const userString = localStorage.getItem('user');
       if (token && userString) {
-        try {
-          const user = JSON.parse(userString);
-          this.isAuthenticated.set(true);
-          this.currentUser.set(user);
-        } catch (e) {
-          // Clear invalid data
+        if (this.isTokenExpired(token)) {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
+        } else {
+          try {
+            const user = JSON.parse(userString);
+            this.isAuthenticated.set(true);
+            this.currentUser.set(user);
+          } catch {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+          }
         }
       }
     }
@@ -62,9 +67,20 @@ export class AuthService {
     return null;
   }
 
-  isAdmin(): boolean {
-    const user = this.currentUser();
-    return user?.role === 'ADMIN';
+  updateUser(user: User): void {
+    if (this.isBrowser) {
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+    this.currentUser.set(user);
+  }
+
+  private isTokenExpired(token: string): boolean {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.exp * 1000 < Date.now();
+    } catch {
+      return true;
+    }
   }
 
   private handleAuth(response: AuthResponse): void {
@@ -72,13 +88,14 @@ export class AuthService {
       localStorage.setItem('token', response.token);
       this.isAuthenticated.set(true);
 
-      // Create user object with proper ID from backend response
       const user: User = {
-        id: response.userId,  // Use the actual userId from backend
+        id: response.userId,
         email: response.email,
+        username: response.username,
         role: response.role,
-        gender: undefined,  // Will be loaded from profile API when needed
-        isActivated: false,
+        gender: undefined,
+        isActivated: response.isActivated ?? false,
+        emailVerified: response.emailVerified ?? false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };

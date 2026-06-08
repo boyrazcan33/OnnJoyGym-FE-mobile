@@ -1,6 +1,7 @@
 export interface User {
   id: number;
   email: string;
+  username?: string;
   role: string;
   bio?: string;
   goals?: string;
@@ -16,6 +17,7 @@ export interface User {
   ageRange?: string;
   telegramUsername?: string;
   isActivated: boolean;
+  emailVerified?: boolean;
 
   createdAt: string;
   updatedAt: string;

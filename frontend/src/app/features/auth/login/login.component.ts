@@ -135,8 +135,9 @@ export class LoginComponent {
 
     this.loading = true;
 
-    this.authService.login(this.form.value as any).subscribe({
+    this.authService.login({ email: this.form.value.email!, password: this.form.value.password! }).subscribe({
       next: () => {
+        this.loading = false;
         this.snackBar.open('Login successful!', 'Close', { duration: 3000 });
         this.router.navigate(['/dashboard']);
       },

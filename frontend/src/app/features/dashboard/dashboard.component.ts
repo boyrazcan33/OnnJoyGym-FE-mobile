@@ -233,7 +233,7 @@ export class DashboardComponent {
 
   getUserName(): string {
     const user = this.authService.currentUser();
-    if (!user?.email) return 'User';
-    return user.email.split('@')[0];
+    if (!user) return 'User';
+    return user.username || user.email.split('@')[0];
   }
 }

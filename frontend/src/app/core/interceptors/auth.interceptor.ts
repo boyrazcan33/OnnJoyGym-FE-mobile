@@ -10,9 +10,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     req.url.includes('s3.') ||
     req.url.includes('.s3.');
 
-  // If it's an S3 request, pass through without modification
   if (isS3Upload) {
-    console.log('🚫 Skipping auth header for S3 upload:', req.url);
     return next(req);
   }
 

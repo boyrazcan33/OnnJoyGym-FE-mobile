@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -150,6 +151,7 @@ export class ProfileComponent implements OnInit {
   private gymService = inject(GymService);
   authService = inject(AuthService);
   private snackBar = inject(MatSnackBar);
+  private destroyRef = inject(DestroyRef);
 
   loading = false;
   user = signal<User | null>(null);
@@ -171,25 +173,30 @@ export class ProfileComponent implements OnInit {
     const currentUser = this.authService.currentUser();
     if (!currentUser) return;
 
-    this.userService.getProfile(currentUser.id).subscribe(user => {
-      this.user.set(user);
-      this.form.patchValue({
-        bio: user.bio,
-        goals: user.goals?.split(',').filter(g => g) || [],
-        experience: user.experience,
-        gymPreference: user.gymPreference
+    this.userService.getProfile(currentUser.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(user => {
+        this.user.set(user);
+        this.form.patchValue({
+          bio: user.bio,
+          goals: user.goals?.split(',').filter(g => g) || [],
+          experience: user.experience,
+          gymPreference: user.gymPreference
+        });
       });
-    });
   }
 
   loadGyms(): void {
-    this.gymService.getAll().subscribe(gyms => this.gyms.set(gyms));
+    this.gymService.getAll()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(gyms => this.gyms.set(gyms));
   }
 
   getInitials(): string {
     const user = this.user();
-    if (!user?.email) return 'U';
-    return user.email.substring(0, 2).toUpperCase();
+    if (!user) return 'U';
+    const name = user.username || user.email;
+    return name.substring(0, 2).toUpperCase();
   }
 
   onSubmit(): void {
@@ -211,7 +218,7 @@ export class ProfileComponent implements OnInit {
     this.userService.updateProfile(user.id, data).subscribe({
       next: (updatedUser) => {
         this.user.set(updatedUser);
-        this.authService.currentUser.set(updatedUser);
+        this.authService.updateUser(updatedUser);
         this.loading = false;
         this.snackBar.open('Profile updated successfully!', 'Close', { duration: 3000 });
       },

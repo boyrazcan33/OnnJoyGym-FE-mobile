@@ -84,7 +84,7 @@ import { MatIconModule } from '@angular/material/icon';
     }
 
     mat-sidenav-content {
-      background: #f4f4f9;
+      background: var(--light);
     }
   `]
 })

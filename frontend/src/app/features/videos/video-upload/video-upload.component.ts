@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -11,6 +11,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { VideoService } from '../../../core/services/video.service';
 import { GymService } from '../../../core/services/gym.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -21,6 +22,8 @@ interface CategoryOption {
   value: string;
   label: string;
 }
+
+const MAX_FILE_SIZE_MB = 200;
 
 @Component({
   selector: 'app-video-upload',
@@ -101,6 +104,7 @@ interface CategoryOption {
                 <h4>Requirements:</h4>
                 <ul>
                   <li>Video must be MP4, MOV, or AVI format</li>
+                  <li>Maximum file size: {{ maxFileSizeMb }} MB</li>
                   <li>Must show exactly 3 reps</li>
                   <li>Full range of motion visible</li>
                   <li>No inappropriate content</li>
@@ -254,7 +258,7 @@ interface CategoryOption {
     }
   `]
 })
-export class VideoUploadComponent implements OnInit {
+export class VideoUploadComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private http = inject(HttpClient);
   private videoService = inject(VideoService);
@@ -263,14 +267,17 @@ export class VideoUploadComponent implements OnInit {
   private userService = inject(UserService);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
+
+  readonly maxFileSizeMb = MAX_FILE_SIZE_MB;
 
   gyms = signal<Gym[]>([]);
   selectedFile = signal<File | null>(null);
   uploadProgress = signal(0);
   uploadStatus = signal<{ type: string; icon: string; message: string } | null>(null);
   uploading = false;
+  userGender = signal<string>('MALE');
 
-  // Gender-based categories (matching backend)
   private readonly MALE_CATEGORIES: CategoryOption[] = [
     { value: 'BENCH_PRESS', label: 'Bench Press' },
     { value: 'SQUAT', label: 'Squat' },
@@ -293,54 +300,65 @@ export class VideoUploadComponent implements OnInit {
     gymId: [null as number | null, Validators.required]
   });
 
-  userGender = signal<string>('MALE');
+  private navTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.loadGyms();
     this.loadUserProfile();
   }
 
+  ngOnDestroy(): void {
+    if (this.navTimer) {
+      clearTimeout(this.navTimer);
+    }
+  }
+
   loadGyms(): void {
-    this.gymService.getAll().subscribe(gyms => this.gyms.set(gyms));
+    this.gymService.getAll()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(gyms => this.gyms.set(gyms));
   }
 
   loadUserProfile(): void {
     const currentUser = this.authService.currentUser();
-    if (currentUser) {
-      this.userService.getProfile(currentUser.id).subscribe({
-        next: (user) => {
-          this.userGender.set(user.gender || 'MALE');
-        },
-        error: () => {
-          this.userGender.set('MALE');
-        }
+    if (!currentUser) return;
+
+    this.userService.getProfile(currentUser.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (user) => this.userGender.set(user.gender || 'MALE'),
+        error: () => this.userGender.set('MALE')
       });
-    }
   }
 
   getAvailableCategories(): CategoryOption[] {
-    const gender = this.userGender();
-    return gender === 'FEMALE' ? this.FEMALE_CATEGORIES : this.MALE_CATEGORIES;
+    return this.userGender() === 'FEMALE' ? this.FEMALE_CATEGORIES : this.MALE_CATEGORIES;
   }
 
-  onFileSelected(event: any): void {
-    const file = event.target.files[0];
-    if (file) {
-      const validFormats = ['video/mp4', 'video/quicktime', 'video/x-msvideo'];
-      if (!validFormats.includes(file.type)) {
-        this.snackBar.open('Only MP4, MOV, and AVI formats are accepted', 'Close', { duration: 3000 });
-        return;
-      }
-      this.selectedFile.set(file);
-      this.uploadStatus.set(null);
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const validFormats = ['video/mp4', 'video/quicktime', 'video/x-msvideo'];
+    if (!validFormats.includes(file.type)) {
+      this.snackBar.open('Only MP4, MOV, and AVI formats are accepted', 'Close', { duration: 3000 });
+      return;
     }
+
+    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      this.snackBar.open(`File size exceeds ${MAX_FILE_SIZE_MB} MB limit`, 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.selectedFile.set(file);
+    this.uploadStatus.set(null);
   }
 
   getFileSize(): string {
     const file = this.selectedFile();
     if (!file) return '';
-    const mb = file.size / 1024 / 1024;
-    return `${mb.toFixed(2)} MB`;
+    return `${(file.size / 1024 / 1024).toFixed(2)} MB`;
   }
 
   onSubmit(): void {
@@ -365,86 +383,62 @@ export class VideoUploadComponent implements OnInit {
       reps: 3
     };
 
-    // Step 1: Get pre-signed URL from backend
-    this.videoService.getUploadUrl(uploadData).subscribe({
-      next: (response) => {
-        console.log('✅ Upload URL received:', response.uploadUrl);
-        // Step 2: Upload directly to S3 using PUT
-        this.uploadToS3(response.uploadUrl, this.selectedFile()!);
-      },
-      error: (err) => {
-        this.uploading = false;
-        this.uploadStatus.set({
-          type: 'error',
-          icon: 'error',
-          message: err.error?.message || 'Failed to get upload URL'
-        });
-      }
-    });
+    this.videoService.getUploadUrl(uploadData)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => this.uploadToS3(response.uploadUrl, this.selectedFile()!),
+        error: (err) => {
+          this.uploading = false;
+          this.uploadStatus.set({
+            type: 'error',
+            icon: 'error',
+            message: err.error?.message || 'Failed to get upload URL'
+          });
+        }
+      });
   }
 
   private uploadToS3(presignedUrl: string, file: File): void {
-    // ✅ CRITICAL: Detect correct content type
-    let contentType = 'video/mp4'; // default
-    if (file.type) {
-      contentType = file.type;
-    } else if (file.name.toLowerCase().endsWith('.mov')) {
-      contentType = 'video/quicktime';
-    } else if (file.name.toLowerCase().endsWith('.avi')) {
-      contentType = 'video/x-msvideo';
+    let contentType = file.type || 'video/mp4';
+    if (!file.type) {
+      if (file.name.toLowerCase().endsWith('.mov')) contentType = 'video/quicktime';
+      else if (file.name.toLowerCase().endsWith('.avi')) contentType = 'video/x-msvideo';
     }
 
-    console.log('📤 Uploading file:', file.name, 'Type:', contentType);
+    const headers = new HttpHeaders({ 'Content-Type': contentType });
 
-    // ✅ Create headers WITHOUT any AWS signature headers
-    const headers = new HttpHeaders({
-      'Content-Type': contentType
-    });
-
-    // ✅ Use PUT method to upload directly to S3
     this.http.put(presignedUrl, file, {
-      headers: headers,
+      headers,
       reportProgress: true,
       observe: 'events',
-      responseType: 'text' // S3 returns XML, not JSON
+      responseType: 'text'
     }).subscribe({
       next: (event) => {
         if (event.type === HttpEventType.UploadProgress) {
-          const progress = Math.round(100 * event.loaded / (event.total || 1));
-          this.uploadProgress.set(progress);
-          console.log(`📊 Upload progress: ${progress}%`);
+          this.uploadProgress.set(Math.round(100 * event.loaded / (event.total || 1)));
         } else if (event.type === HttpEventType.Response) {
-          // Upload complete
-          console.log('✅ Upload complete!');
           this.uploadProgress.set(100);
           this.uploading = false;
-
           this.uploadStatus.set({
             type: 'success',
             icon: 'check_circle',
-            message: '✅ Video uploaded successfully! Awaiting admin review.'
+            message: 'Video uploaded successfully! Awaiting admin review.'
           });
 
-          setTimeout(() => {
+          this.navTimer = setTimeout(() => {
             this.snackBar.open('Video uploaded! Waiting for admin approval.', 'Close', { duration: 3000 });
             this.router.navigate(['/dashboard']);
           }, 2000);
         }
       },
-      error: (error) => {
-        console.error('❌ Upload failed:', error);
+      error: () => {
         this.uploading = false;
         this.uploadProgress.set(0);
         this.uploadStatus.set({
           type: 'error',
           icon: 'error',
-          message: '❌ Upload failed. Please try again.'
+          message: 'Upload failed. Please try again.'
         });
-
-        // Show detailed error
-        if (error.error) {
-          console.error('Error details:', error.error);
-        }
       }
     });
   }

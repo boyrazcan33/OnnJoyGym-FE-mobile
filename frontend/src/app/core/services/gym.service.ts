@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, shareReplay } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Gym } from '../../models/gym.model';
 
@@ -9,8 +9,10 @@ export class GymService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiUrl}/gyms`;
 
+  private allGyms$ = this.http.get<Gym[]>(this.apiUrl).pipe(shareReplay(1));
+
   getAll(): Observable<Gym[]> {
-    return this.http.get<Gym[]>(this.apiUrl);
+    return this.allGyms$;
   }
 
   getById(id: number): Observable<Gym> {

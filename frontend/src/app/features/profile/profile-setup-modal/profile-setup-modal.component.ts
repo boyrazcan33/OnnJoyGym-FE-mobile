@@ -136,7 +136,7 @@ export class ProfileSetupModalComponent {
 
     this.userService.updateProfile(user.id, data).subscribe({
       next: (updatedUser) => {
-        this.authService.currentUser.set(updatedUser);
+        this.authService.updateUser(updatedUser);
         this.snackBar.open('Profile updated!', 'Close', { duration: 3000 });
         this.dialogRef.close();
       },

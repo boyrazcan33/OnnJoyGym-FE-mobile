@@ -4,6 +4,14 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { User } from '../../models/user.model';
 
+export interface UserSearchFilters {
+  goals?: string;
+  experience?: string;
+  gymPreference?: number;
+  gender?: string;
+  trainingGoal?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private http = inject(HttpClient);
@@ -17,7 +25,7 @@ export class UserService {
     return this.http.put<User>(`${this.apiUrl}/${id}/profile`, data);
   }
 
-  joinClub(userId: number, clubId: number): Observable<any> {
+  joinClub(userId: number, clubId: number): Observable<unknown> {
     return this.http.post(`${this.apiUrl}/${userId}/clubs/${clubId}/join`, {});
   }
 
@@ -25,7 +33,7 @@ export class UserService {
     return this.http.delete<void>(`${this.apiUrl}/${userId}/clubs/${clubId}/leave`);
   }
 
-  searchUsers(filters: any): Observable<User[]> {
-    return this.http.get<User[]>(`${this.apiUrl}/search`, { params: filters });
+  searchUsers(filters: UserSearchFilters): Observable<User[]> {
+    return this.http.get<User[]>(`${this.apiUrl}/search`, { params: { ...filters } });
   }
 }

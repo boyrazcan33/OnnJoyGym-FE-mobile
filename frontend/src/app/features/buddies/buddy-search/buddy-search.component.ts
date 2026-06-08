@@ -1,14 +1,15 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatBadgeModule } from '@angular/material/badge';
+import { forkJoin } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BuddyMatchingService } from '../../../core/services/buddy-matching.service';
 import { GymService } from '../../../core/services/gym.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -25,7 +26,6 @@ import { Gym } from '../../../models/gym.model';
     MatButtonModule,
     MatIconModule,
     MatChipsModule,
-    MatDialogModule,
     MatTabsModule,
     MatBadgeModule
   ],
@@ -133,7 +133,7 @@ import { Gym } from '../../../models/gym.model';
                             @if (match.isConnected && match.telegramUsername) {
                               <div class="telegram-info">
                                 <mat-icon>telegram</mat-icon>
-                                <a [href]="'https://t.me/' + match.telegramUsername.substring(1)" target="_blank">
+                                <a [href]="getTelegramUrl(match.telegramUsername)" target="_blank">
                                   {{ match.telegramUsername }}
                                 </a>
                               </div>
@@ -289,7 +289,7 @@ import { Gym } from '../../../models/gym.model';
                         @if (connection.telegramUsername) {
                           <div class="telegram-contact">
                             <mat-icon>telegram</mat-icon>
-                            <a [href]="'https://t.me/' + connection.telegramUsername.substring(1)" target="_blank">
+                            <a [href]="getTelegramUrl(connection.telegramUsername)" target="_blank">
                               {{ connection.telegramUsername }}
                             </a>
                           </div>
@@ -692,6 +692,7 @@ export class BuddySearchComponent implements OnInit {
   private gymService = inject(GymService);
   private authService = inject(AuthService);
   private snackBar = inject(MatSnackBar);
+  private destroyRef = inject(DestroyRef);
 
   matches = signal<BuddyMatchResponse[]>([]);
   receivedRequests = signal<BuddyRequestResponse[]>([]);
@@ -721,7 +722,9 @@ export class BuddySearchComponent implements OnInit {
   }
 
   loadGyms(): void {
-    this.gymService.getAll().subscribe(gyms => this.gyms.set(gyms));
+    this.gymService.getAll()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(gyms => this.gyms.set(gyms));
   }
 
   loadMatches(): void {
@@ -729,16 +732,18 @@ export class BuddySearchComponent implements OnInit {
     if (!user || !this.userActivated()) return;
 
     this.loadingMatches = true;
-    this.buddyService.findMatches(user.id).subscribe({
-      next: (matches) => {
-        this.matches.set(matches);
-        this.loadingMatches = false;
-      },
-      error: () => {
-        this.loadingMatches = false;
-        this.snackBar.open('Failed to load matches', 'Close', { duration: 3000 });
-      }
-    });
+    this.buddyService.findMatches(user.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (matches) => {
+          this.matches.set(matches);
+          this.loadingMatches = false;
+        },
+        error: () => {
+          this.loadingMatches = false;
+          this.snackBar.open('Failed to load matches', 'Close', { duration: 3000 });
+        }
+      });
   }
 
   loadRequests(): void {
@@ -747,23 +752,14 @@ export class BuddySearchComponent implements OnInit {
 
     this.loadingRequests = true;
 
-    // Load received requests
-    this.buddyService.getReceivedRequests(user.id).subscribe({
-      next: (requests) => {
-        this.receivedRequests.set(requests);
-      }
-    });
-
-    // Load sent requests
-    this.buddyService.getSentRequests(user.id).subscribe({
-      next: (requests) => {
-        this.sentRequests.set(requests);
-      }
-    });
-
-    // Load connections
-    this.buddyService.getAcceptedConnections(user.id).subscribe({
-      next: (connections) => {
+    forkJoin({
+      received: this.buddyService.getReceivedRequests(user.id),
+      sent: this.buddyService.getSentRequests(user.id),
+      connections: this.buddyService.getAcceptedConnections(user.id)
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ received, sent, connections }) => {
+        this.receivedRequests.set(received);
+        this.sentRequests.set(sent);
         this.connections.set(connections);
         this.loadingRequests = false;
       },
@@ -779,60 +775,68 @@ export class BuddySearchComponent implements OnInit {
 
     this.sendingRequest = receiverId;
 
-    this.buddyService.sendRequest({
-      senderId: user.id,
-      receiverId: receiverId
-    }).subscribe({
-      next: () => {
-        this.snackBar.open('Request sent!', 'Close', { duration: 3000 });
-        this.sendingRequest = null;
-        this.loadMatches();
-        this.loadRequests();
-      },
-      error: (err) => {
-        this.sendingRequest = null;
-        this.snackBar.open(err.error?.message || 'Failed to send request', 'Close', { duration: 3000 });
-      }
-    });
+    this.buddyService.sendRequest({ senderId: user.id, receiverId })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.snackBar.open('Request sent!', 'Close', { duration: 3000 });
+          this.sendingRequest = null;
+          this.loadMatches();
+          this.loadRequests();
+        },
+        error: (err) => {
+          this.sendingRequest = null;
+          this.snackBar.open(err.error?.message || 'Failed to send request', 'Close', { duration: 3000 });
+        }
+      });
   }
 
   acceptRequest(requestId: number): void {
     this.processingRequest = requestId;
 
-    this.buddyService.acceptRequest(requestId).subscribe({
-      next: () => {
-        this.snackBar.open('Request accepted!', 'Close', { duration: 3000 });
-        this.processingRequest = null;
-        this.loadRequests();
-        this.loadMatches();
-      },
-      error: () => {
-        this.processingRequest = null;
-        this.snackBar.open('Failed to accept request', 'Close', { duration: 3000 });
-      }
-    });
+    this.buddyService.acceptRequest(requestId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.snackBar.open('Request accepted!', 'Close', { duration: 3000 });
+          this.processingRequest = null;
+          this.loadRequests();
+          this.loadMatches();
+        },
+        error: () => {
+          this.processingRequest = null;
+          this.snackBar.open('Failed to accept request', 'Close', { duration: 3000 });
+        }
+      });
   }
 
   rejectRequest(requestId: number): void {
     this.processingRequest = requestId;
 
-    this.buddyService.rejectRequest(requestId).subscribe({
-      next: () => {
-        this.snackBar.open('Request rejected', 'Close', { duration: 3000 });
-        this.processingRequest = null;
-        this.loadRequests();
-      },
-      error: () => {
-        this.processingRequest = null;
-        this.snackBar.open('Failed to reject request', 'Close', { duration: 3000 });
-      }
-    });
+    this.buddyService.rejectRequest(requestId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.snackBar.open('Request rejected', 'Close', { duration: 3000 });
+          this.processingRequest = null;
+          this.loadRequests();
+        },
+        error: () => {
+          this.processingRequest = null;
+          this.snackBar.open('Failed to reject request', 'Close', { duration: 3000 });
+        }
+      });
   }
 
   onTabChange(index: number): void {
     if (index > 0) {
       this.loadRequests();
     }
+  }
+
+  getTelegramUrl(username: string): string {
+    const handle = username.startsWith('@') ? username.slice(1) : username;
+    return `https://t.me/${handle}`;
   }
 
   getGymName(gymId: number): string {
