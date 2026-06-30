@@ -1,13 +1,19 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { GymBrandService } from '../../../core/services/gym-brand.service';
 import { ReviewService } from '../../../core/services/review.service';
+import { UserCommentService } from '../../../core/services/user-comment.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { GymBrand, Review } from '../../../models/review.model';
 
 @Component({
@@ -16,11 +22,15 @@ import { GymBrand, Review } from '../../../models/review.model';
   imports: [
     CommonModule,
     RouterLink,
+    FormsModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
     MatDividerModule,
-    MatChipsModule
+    MatChipsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule
   ],
   template: `
     <div class="gym-detail">
@@ -28,7 +38,7 @@ import { GymBrand, Review } from '../../../models/review.model';
         @if (loading) {
           <div class="loading">Loading...</div>
         } @else if (brand()) {
-          <button mat-button routerLink="/gyms" class="back-button">
+          <button mat-button (click)="goBack()" class="back-button">
             <mat-icon>arrow_back</mat-icon>
             Back to Brands
           </button>
@@ -43,8 +53,20 @@ import { GymBrand, Review } from '../../../models/review.model';
               <h1>{{ brand()!.name }}</h1>
               <p class="locations">
                 <mat-icon>location_on</mat-icon>
-                {{ brand()!.totalLocations }} locations in Estonia
+                {{ brand()!.totalLocations }} locations in {{ brand()!.country || 'Estonia' }}
               </p>
+              @if (brand()!.type) {
+                <p class="gym-type">
+                  <mat-icon>category</mat-icon>
+                  {{ brand()!.type }}
+                </p>
+              }
+              @if (brand()!.website) {
+                <a class="website-link" [href]="brand()!.website" target="_blank" rel="noopener noreferrer">
+                  <mat-icon>language</mat-icon>
+                  Visit website
+                </a>
+              }
             </div>
           </div>
 
@@ -71,7 +93,15 @@ import { GymBrand, Review } from '../../../models/review.model';
                         @for (star of getStars(review.rating); track $index) {
                           <mat-icon>{{ star }}</mat-icon>
                         }
+                        @if (review.reviewAccuracyScore != null) {
+                          <span class="accuracy-score">
+                            Data accuracy: <strong>{{ review.reviewAccuracyScore }}/10</strong>
+                          </span>
+                        }
                       </div>
+                      @if (review.reviewAccuracyScore != null) {
+                        <p class="accuracy-note">* Reflects how much verified data was available during our research — out of 10</p>
+                      }
                     </div>
                   </mat-card-header>
                   <mat-card-content>
@@ -115,6 +145,63 @@ import { GymBrand, Review } from '../../../models/review.model';
                 <mat-icon>rate_review</mat-icon>
                 <p>No reviews yet</p>
               </div>
+            }
+          </div>
+
+          <mat-divider></mat-divider>
+
+          <div class="comment-section">
+            <h2>Share Your Experience</h2>
+
+            @if (!authService.isAuthenticated()) {
+              <p class="login-prompt">
+                <a routerLink="/login">Log in</a> to leave a comment about this gym.
+              </p>
+            } @else if (commentSuccess()) {
+              <div class="success-message">
+                <mat-icon>check_circle</mat-icon>
+                Thank you! We will review your comment.
+              </div>
+            } @else {
+              <mat-card class="comment-form-card">
+                <mat-card-content>
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Your rating</mat-label>
+                    <mat-select [(ngModel)]="commentRating" name="rating">
+                      <mat-option [value]="1">1 – Poor</mat-option>
+                      <mat-option [value]="2">2 – Fair</mat-option>
+                      <mat-option [value]="3">3 – Good</mat-option>
+                      <mat-option [value]="4">4 – Very Good</mat-option>
+                      <mat-option [value]="5">5 – Excellent</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Your comment</mat-label>
+                    <textarea
+                      matInput
+                      [(ngModel)]="commentText"
+                      name="comment"
+                      rows="4"
+                      maxlength="300"
+                      placeholder="Share your experience with this gym...">
+                    </textarea>
+                    <mat-hint align="end">{{ commentText.length }}/300</mat-hint>
+                  </mat-form-field>
+
+                  @if (commentError()) {
+                    <p class="error-message">{{ commentError() }}</p>
+                  }
+
+                  <button
+                    mat-raised-button
+                    color="primary"
+                    (click)="submitComment()"
+                    [disabled]="submitting() || !commentRating || !commentText.trim()">
+                    {{ submitting() ? 'Submitting...' : 'Submit Comment' }}
+                  </button>
+                </mat-card-content>
+              </mat-card>
             }
           </div>
         }
@@ -168,12 +255,39 @@ import { GymBrand, Review } from '../../../models/review.model';
         margin-bottom: 1rem;
       }
 
-      .locations {
+      .locations, .gym-type {
         display: flex;
         align-items: center;
         gap: 0.5rem;
         color: #666;
         font-size: 1.125rem;
+        margin-bottom: 0.5rem;
+
+        mat-icon {
+          font-size: 1.25rem;
+          width: 1.25rem;
+          height: 1.25rem;
+        }
+      }
+
+      .website-link {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--primary);
+        text-decoration: none;
+        font-size: 1rem;
+        margin-top: 0.5rem;
+
+        mat-icon {
+          font-size: 1.25rem;
+          width: 1.25rem;
+          height: 1.25rem;
+        }
+
+        &:hover {
+          text-decoration: underline;
+        }
       }
     }
 
@@ -181,7 +295,7 @@ import { GymBrand, Review } from '../../../models/review.model';
       margin: 2rem 0;
     }
 
-    .reviews-section {
+    .reviews-section, .comment-section {
       h2 {
         font-size: 2rem;
         margin-bottom: 1.5rem;
@@ -221,6 +335,20 @@ import { GymBrand, Review } from '../../../models/review.model';
         width: 1.5rem;
         height: 1.5rem;
       }
+    }
+
+    .accuracy-score {
+      font-size: 0.85rem;
+      color: #555;
+      margin-left: 0.75rem;
+      white-space: nowrap;
+    }
+
+    .accuracy-note {
+      font-size: 0.78rem;
+      color: #999;
+      font-style: italic;
+      margin: 0.25rem 0 0.75rem;
     }
 
     .price-section {
@@ -300,6 +428,53 @@ import { GymBrand, Review } from '../../../models/review.model';
       }
     }
 
+    .login-prompt {
+      color: #666;
+      font-size: 1rem;
+
+      a {
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 500;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+
+    .comment-form-card {
+      max-width: 600px;
+
+      .full-width {
+        width: 100%;
+        margin-bottom: 1rem;
+      }
+    }
+
+    .success-message {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1.25rem 1.5rem;
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      border-radius: 8px;
+      color: #155724;
+      font-weight: 500;
+      max-width: 600px;
+
+      mat-icon {
+        color: #28a745;
+      }
+    }
+
+    .error-message {
+      color: #dc3545;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+
     .loading {
       text-align: center;
       padding: 4rem 0;
@@ -325,12 +500,21 @@ import { GymBrand, Review } from '../../../models/review.model';
 })
 export class GymDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private gymBrandService = inject(GymBrandService);
   private reviewService = inject(ReviewService);
+  private userCommentService = inject(UserCommentService);
+  authService = inject(AuthService);
 
   brand = signal<GymBrand | null>(null);
   reviews = signal<Review[]>([]);
   loading = false;
+
+  commentRating: number | null = null;
+  commentText = '';
+  submitting = signal(false);
+  commentSuccess = signal(false);
+  commentError = signal<string | null>(null);
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -354,6 +538,37 @@ export class GymDetailComponent implements OnInit {
   loadReviews(brandId: number): void {
     this.reviewService.getReviewsByBrandId(brandId).subscribe(reviews => {
       this.reviews.set(reviews);
+    });
+  }
+
+  goBack(): void {
+    const country = this.brand()?.country;
+    if (country) {
+      this.router.navigate(['/gyms'], { queryParams: { country } });
+    } else {
+      this.router.navigate(['/gyms']);
+    }
+  }
+
+  submitComment(): void {
+    if (!this.commentRating || !this.commentText.trim()) return;
+    this.submitting.set(true);
+    this.commentError.set(null);
+
+    this.userCommentService.submitComment({
+      brandId: this.brand()!.id,
+      rating: this.commentRating,
+      comment: this.commentText.trim()
+    }).subscribe({
+      next: () => {
+        this.submitting.set(false);
+        this.commentSuccess.set(true);
+      },
+      error: (err) => {
+        this.submitting.set(false);
+        const message = err?.error?.message || err?.error || 'Something went wrong. Please try again.';
+        this.commentError.set(typeof message === 'string' ? message : 'Something went wrong. Please try again.');
+      }
     });
   }
 

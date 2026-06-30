@@ -2,6 +2,15 @@ export interface GymBrand {
   id: number;
   name: string;
   totalLocations: number;
+  country?: string;
+  website?: string;
+  type?: string;
+}
+
+export interface UserCommentRequest {
+  brandId: number;
+  rating: number;
+  comment: string;
 }
 
 export interface Review {
@@ -15,6 +24,7 @@ export interface Review {
   content: string;
   authorName: string;
   isExpert: boolean;
+  reviewAccuracyScore?: number;
   createdAt: string;
   updatedAt: string;
 }

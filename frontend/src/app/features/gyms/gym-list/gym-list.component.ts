@@ -1,11 +1,13 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 import { FormsModule } from '@angular/forms';
 import { GymBrandService } from '../../../core/services/gym-brand.service';
 import { GymBrand } from '../../../models/review.model';
@@ -21,21 +23,33 @@ import { GymBrand } from '../../../models/review.model';
     MatButtonModule,
     MatIconModule,
     MatInputModule,
-    MatFormFieldModule
+    MatFormFieldModule,
+    MatSelectModule
   ],
   template: `
     <div class="gym-list">
       <div class="container">
         <div class="page-header">
-          <h1>Gym Brands in Estonia</h1>
+          <h1>Gym Brands in {{ selectedCountry() }}</h1>
           <p>Expert reviews from NCAA-certified trainer</p>
         </div>
 
-        <mat-form-field appearance="outline" class="search-field">
-          <mat-label>Search brands</mat-label>
-          <input matInput [(ngModel)]="searchTerm" (ngModelChange)="filterBrands()" placeholder="Brand name...">
-          <mat-icon matPrefix>search</mat-icon>
-        </mat-form-field>
+        <div class="filters-row">
+          <mat-form-field appearance="outline" class="country-field">
+            <mat-label>Country</mat-label>
+            <mat-select [value]="selectedCountry()" (selectionChange)="onCountryChange($event.value)">
+              @for (country of countries(); track country) {
+                <mat-option [value]="country">{{ country }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Search brands</mat-label>
+            <input matInput [(ngModel)]="searchTerm" (ngModelChange)="filterBrands()" placeholder="Brand name...">
+            <mat-icon matPrefix>search</mat-icon>
+          </mat-form-field>
+        </div>
 
         @if (loading) {
           <div class="loading">Loading gym brands...</div>
@@ -92,11 +106,20 @@ import { GymBrand } from '../../../models/review.model';
       }
     }
 
-    .search-field {
-      width: 100%;
-      max-width: 600px;
+    .filters-row {
+      display: flex;
+      gap: 1rem;
+      max-width: 800px;
       margin: 0 auto 2rem;
-      display: block;
+
+      .country-field {
+        width: 200px;
+        flex-shrink: 0;
+      }
+
+      .search-field {
+        flex: 1;
+      }
     }
 
     .gym-grid {
@@ -171,6 +194,14 @@ import { GymBrand } from '../../../models/review.model';
         font-size: 2rem;
       }
 
+      .filters-row {
+        flex-direction: column;
+
+        .country-field {
+          width: 100%;
+        }
+      }
+
       .gym-grid {
         grid-template-columns: 1fr;
       }
@@ -179,19 +210,35 @@ import { GymBrand } from '../../../models/review.model';
 })
 export class GymListComponent implements OnInit {
   private gymBrandService = inject(GymBrandService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
 
   brands = signal<GymBrand[]>([]);
   filteredBrands = signal<GymBrand[]>([]);
+  countries = signal<string[]>([]);
+  selectedCountry = signal<string>('Estonia');
   loading = false;
   searchTerm = '';
 
   ngOnInit(): void {
-    this.loadBrands();
+    this.gymBrandService.getCountries().subscribe(countries => {
+      this.countries.set(countries);
+    });
+
+    this.route.queryParams
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        const country = params['country'] || 'Estonia';
+        this.selectedCountry.set(country);
+        this.searchTerm = '';
+        this.loadBrandsByCountry(country);
+      });
   }
 
-  loadBrands(): void {
+  loadBrandsByCountry(country: string): void {
     this.loading = true;
-    this.gymBrandService.getAllBrands().subscribe({
+    this.gymBrandService.getBrandsByCountry(country).subscribe({
       next: (brands) => {
         this.brands.set(brands);
         this.filteredBrands.set(brands);
@@ -203,16 +250,18 @@ export class GymListComponent implements OnInit {
     });
   }
 
+  onCountryChange(country: string): void {
+    this.router.navigate(['/gyms'], { queryParams: { country } });
+  }
+
   filterBrands(): void {
     const term = this.searchTerm.toLowerCase();
     if (!term) {
       this.filteredBrands.set(this.brands());
       return;
     }
-
-    const filtered = this.brands().filter(brand =>
-      brand.name.toLowerCase().includes(term)
+    this.filteredBrands.set(
+      this.brands().filter(brand => brand.name.toLowerCase().includes(term))
     );
-    this.filteredBrands.set(filtered);
   }
 }

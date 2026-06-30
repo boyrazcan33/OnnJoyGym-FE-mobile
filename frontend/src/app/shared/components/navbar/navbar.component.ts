@@ -1,12 +1,13 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../../core/services/auth.service';
+import { GymBrandService } from '../../../core/services/gym-brand.service';
 
 @Component({
   selector: 'app-navbar',
@@ -32,7 +33,17 @@ import { AuthService } from '../../../core/services/auth.service';
 
           @if (authService.isAuthenticated()) {
             <nav class="nav-links desktop-only">
-              <a routerLink="/gyms" routerLinkActive="active">Gyms</a>
+              <a [matMenuTriggerFor]="gymsMenu" class="gyms-trigger">
+                Gyms <mat-icon class="dropdown-arrow">arrow_drop_down</mat-icon>
+              </a>
+              <mat-menu #gymsMenu="matMenu">
+                @for (country of countries(); track country) {
+                  <button mat-menu-item (click)="navigateToGyms(country)">
+                    <mat-icon>location_on</mat-icon>
+                    <span>{{ country }}</span>
+                  </button>
+                }
+              </mat-menu>
               <a routerLink="/leaderboard" routerLinkActive="active">Leaderboard</a>
               <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
               <a routerLink="/buddies" routerLinkActive="active">Buddies</a>
@@ -75,10 +86,12 @@ import { AuthService } from '../../../core/services/auth.service';
 
       @if (mobileMenuOpen && authService.isAuthenticated()) {
         <nav class="mobile-nav">
-          <a routerLink="/gyms" routerLinkActive="active" (click)="closeMobileMenu()">
-            <mat-icon>fitness_center</mat-icon>
-            <span>Gyms</span>
-          </a>
+          @for (country of countries(); track country) {
+            <a (click)="navigateToGyms(country); closeMobileMenu()">
+              <mat-icon>fitness_center</mat-icon>
+              <span>Gyms – {{ country }}</span>
+            </a>
+          }
           <a routerLink="/leaderboard" routerLinkActive="active" (click)="closeMobileMenu()">
             <mat-icon>emoji_events</mat-icon>
             <span>Leaderboard</span>
@@ -147,15 +160,29 @@ import { AuthService } from '../../../core/services/auth.service';
     .nav-links {
       display: flex;
       gap: 1.5rem;
+      align-items: center;
 
       a {
         color: rgba(255,255,255,0.8);
         text-decoration: none;
         font-weight: 500;
         transition: color 0.2s;
+        cursor: pointer;
 
         &:hover, &.active {
           color: var(--primary);
+        }
+      }
+
+      .gyms-trigger {
+        display: flex;
+        align-items: center;
+
+        .dropdown-arrow {
+          font-size: 1.25rem;
+          width: 1.25rem;
+          height: 1.25rem;
+          vertical-align: middle;
         }
       }
     }
@@ -197,6 +224,7 @@ import { AuthService } from '../../../core/services/auth.service';
         text-decoration: none;
         font-weight: 500;
         transition: color 0.2s, background 0.2s;
+        cursor: pointer;
 
         mat-icon {
           font-size: 1.25rem;
@@ -230,9 +258,22 @@ import { AuthService } from '../../../core/services/auth.service';
     }
   `]
 })
-export class NavbarComponent {
+export class NavbarComponent implements OnInit {
   authService = inject(AuthService);
+  private gymBrandService = inject(GymBrandService);
+  private router = inject(Router);
   mobileMenuOpen = false;
+  countries = signal<string[]>([]);
+
+  ngOnInit(): void {
+    this.gymBrandService.getCountries().subscribe(countries => {
+      this.countries.set(countries);
+    });
+  }
+
+  navigateToGyms(country: string): void {
+    this.router.navigate(['/gyms'], { queryParams: { country } });
+  }
 
   getInitials(): string {
     const user = this.authService.currentUser();

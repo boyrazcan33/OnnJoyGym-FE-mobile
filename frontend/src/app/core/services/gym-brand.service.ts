@@ -13,6 +13,14 @@ export class GymBrandService {
     return this.http.get<GymBrand[]>(this.apiUrl);
   }
 
+  getBrandsByCountry(country: string): Observable<GymBrand[]> {
+    return this.http.get<GymBrand[]>(this.apiUrl, { params: { country } });
+  }
+
+  getCountries(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/countries`);
+  }
+
   getBrandById(id: number): Observable<GymBrand> {
     return this.http.get<GymBrand>(`${this.apiUrl}/${id}`);
   }
