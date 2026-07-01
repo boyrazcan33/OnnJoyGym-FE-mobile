@@ -161,7 +161,8 @@ import { Gym } from '../../../models/gym.model';
                   } @else {
                     <div class="empty-state">
                       <mat-icon>search_off</mat-icon>
-                      <p>No matches found with score above 50%.</p>
+                      <p>No training partners found nearby.</p>
+                      <p class="empty-state-hint">Try adjusting your gym locations or training times to find more matches.</p>
                       <button mat-raised-button color="primary" routerLink="/buddies/preferences">
                         Update Preferences
                       </button>
@@ -665,6 +666,12 @@ import { Gym } from '../../../models/gym.model';
 
       p {
         margin-bottom: 1.5rem;
+      }
+
+      .empty-state-hint {
+        font-size: 0.875rem;
+        color: #999;
+        margin-top: -1rem;
       }
     }
 
