@@ -1,6 +1,6 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -12,6 +12,30 @@ import { BuddyMatchingService } from '../../../core/services/buddy-matching.serv
 import { GymService } from '../../../core/services/gym.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Gym } from '../../../models/gym.model';
+
+// Known gym brands in Estonia — ordered longest-first so startsWith matches most specific name first.
+const KNOWN_BRANDS = [
+  'Sparta Sports Club',
+  'Arctic Sport Club',
+  '24/7 Fitness',
+  'HC Gym',
+  'Golden Club',
+  'Club 26',
+  'Reval Sport',
+  'Lemon Gym',
+  'MyFitness',
+  'Gym!'
+];
+
+function minItemsValidator(min: number): ValidatorFn {
+  return (control: AbstractControl) => {
+    const val = control.value;
+    if (!Array.isArray(val) || val.length < min) {
+      return { minItems: { required: min, actual: val?.length ?? 0 } };
+    }
+    return null;
+  };
+}
 
 @Component({
   selector: 'app-buddy-preferences',
@@ -36,82 +60,33 @@ import { Gym } from '../../../models/gym.model';
 
           <mat-card-content>
             <form [formGroup]="form" (ngSubmit)="onSubmit()">
-              <mat-form-field appearance="outline">
-                <mat-label>Training Goal</mat-label>
-                <mat-select formControlName="trainingGoal" required>
-                  <mat-option value="HYPERTROPHY">Hypertrophy</mat-option>
-                  <mat-option value="FAT_LOSS">Fat Loss</mat-option>
-                  <mat-option value="ENDURANCE">Endurance</mat-option>
-                  <mat-option value="MOBILITY">Mobility</mat-option>
-                </mat-select>
-              </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Gender</mat-label>
-                <mat-select formControlName="gender" required>
-                  <mat-option value="MALE">Male</mat-option>
-                  <mat-option value="FEMALE">Female</mat-option>
-                  <mat-option value="NON_BINARY">Non-Binary</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Preferred Gyms (1-5)</mat-label>
-                <mat-select formControlName="preferredLocations" multiple required>
+                <mat-label>Gym Branches (select at least 3)</mat-label>
+                <mat-select formControlName="preferredLocations" multiple required
+                            (selectionChange)="onLocationChange($event.value)">
                   @for (gym of gyms; track gym.id) {
                     <mat-option [value]="gym.id">{{ gym.name }}</mat-option>
                   }
                 </mat-select>
-                <mat-hint>Select 1-5 gym locations</mat-hint>
+                <mat-hint>Min 3 branches, from at most 2 brands (e.g., MyFitness + Gym!)</mat-hint>
               </mat-form-field>
+              @if (locationError()) {
+                <div class="field-error">{{ locationError() }}</div>
+              }
 
               <mat-form-field appearance="outline">
-                <mat-label>Training Schedule (1-2 slots)</mat-label>
+                <mat-label>Training Time (select at least 1)</mat-label>
                 <mat-select formControlName="dailySchedule" multiple required>
-                  <mat-option value="EARLY_MORNING">Early Morning (5-8 AM)</mat-option>
-                  <mat-option value="MORNING">Morning (8-12 PM)</mat-option>
-                  <mat-option value="AFTERNOON">Afternoon (12-5 PM)</mat-option>
-                  <mat-option value="EVENING">Evening (5-9 PM)</mat-option>
-                  <mat-option value="NIGHT">Night (9 PM-12 AM)</mat-option>
+                  <mat-option value="MORNING">Morning (6 AM – 12 PM)</mat-option>
+                  <mat-option value="AFTERNOON">Afternoon (12 PM – 6 PM)</mat-option>
+                  <mat-option value="EVENING">Evening (6 PM – 12 AM)</mat-option>
+                  <mat-option value="NIGHT">Night (12 AM – 6 AM)</mat-option>
                 </mat-select>
-                <mat-hint>Select 1-2 time slots</mat-hint>
+                <mat-hint>Select all slots that work for you</mat-hint>
               </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Social Behavior</mat-label>
-                <mat-select formControlName="socialBehavior" required>
-                  <mat-option value="FOCUSED">Focused (minimal talking)</mat-option>
-                  <mat-option value="CHATTY">Chatty (social)</mat-option>
-                  <mat-option value="COMPETITIVE">Competitive</mat-option>
-                  <mat-option value="SUPPORTIVE">Supportive</mat-option>
-                  <mat-option value="NEUTRAL">Neutral</mat-option>
-                  <mat-option value="COACH_STYLE">Coach Style</mat-option>
-                  <mat-option value="SPOTTER_ONLY">Spotter Only</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Age Range</mat-label>
-                <mat-select formControlName="ageRange" required>
-                  <mat-option value="16-30">16-30</mat-option>
-                  <mat-option value="31-45">31-45</mat-option>
-                  <mat-option value="45+">45+</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Telegram Username</mat-label>
-                <input matInput formControlName="telegramUsername" [placeholder]="getPlaceholderText()" required>
-                <mat-hint>{{ getHintText() }}</mat-hint>
-                @if (telegramControl.hasError('required') && telegramControl.touched) {
-                  <mat-error>Telegram username is required</mat-error>
-                }
-                @if (telegramControl.hasError('pattern') && !telegramControl.hasError('required')) {
-                  <mat-error>Invalid format. Must start with {{ getAtSymbol() }} and be 5-32 characters</mat-error>
-                }
-              </mat-form-field>
-
-              <button mat-raised-button color="primary" type="submit" [disabled]="loading || form.invalid">
+              <button mat-raised-button color="primary" type="submit" [disabled]="loading || !canSubmit()">
                 {{ loading ? 'Saving...' : 'Find Matches' }}
               </button>
             </form>
@@ -142,6 +117,13 @@ import { Gym } from '../../../models/gym.model';
       width: 100%;
     }
 
+    .field-error {
+      color: #f44336;
+      font-size: 0.75rem;
+      margin-top: -0.75rem;
+      padding-left: 1rem;
+    }
+
     button[type="submit"] {
       width: 100%;
       padding: 0.75rem;
@@ -165,19 +147,15 @@ export class BuddyPreferencesComponent implements OnInit {
 
   loading = false;
   gyms: Gym[] = [];
+  locationError = signal<string | null>(null);
 
   form = this.fb.group({
-    trainingGoal: ['', Validators.required],
-    gender: ['', Validators.required],
-    preferredLocations: [[] as number[], [Validators.required, Validators.minLength(1), Validators.maxLength(5)]],
-    dailySchedule: [[] as string[], [Validators.required, Validators.minLength(1), Validators.maxLength(2)]],
-    socialBehavior: ['', Validators.required],
-    ageRange: ['', Validators.required],
-    telegramUsername: ['', [Validators.required, Validators.pattern(/^@[a-zA-Z0-9_]{5,32}$/)]]
+    preferredLocations: [[] as number[], [Validators.required, minItemsValidator(3)]],
+    dailySchedule: [[] as string[], [Validators.required, minItemsValidator(1)]]
   });
 
-  get telegramControl() {
-    return this.form.controls.telegramUsername;
+  canSubmit(): boolean {
+    return this.form.valid && this.locationError() === null;
   }
 
   ngOnInit(): void {
@@ -188,21 +166,36 @@ export class BuddyPreferencesComponent implements OnInit {
     this.gymService.getAll().subscribe(gyms => this.gyms = gyms);
   }
 
-  getPlaceholderText(): string {
-    return '@username';
+  getBrandFromGymName(gymName: string): string {
+    return KNOWN_BRANDS.find(b => gymName.startsWith(b)) ?? gymName;
   }
 
-  getHintText(): string {
-    return 'Start with @ (e.g., @john_doe)';
-  }
-
-  getAtSymbol(): string {
-    return '@';
+  onLocationChange(selectedIds: number[]): void {
+    if (selectedIds.length === 0) {
+      this.locationError.set(null);
+      return;
+    }
+    if (selectedIds.length < 3) {
+      this.locationError.set('Select at least 3 gym branches');
+      return;
+    }
+    const brands = new Set(
+      selectedIds.map(id => this.getBrandFromGymName(this.gyms.find(g => g.id === id)?.name ?? ''))
+    );
+    if (brands.size > 2) {
+      this.locationError.set('Select branches from at most 2 gym brands (e.g., MyFitness + Gym!)');
+    } else {
+      this.locationError.set(null);
+    }
   }
 
   onSubmit(): void {
-    if (this.form.invalid) {
+    if (this.form.invalid || this.locationError()) {
       this.form.markAllAsTouched();
+      const locations = this.form.value.preferredLocations ?? [];
+      if (locations.length > 0 && locations.length < 3) {
+        this.locationError.set('Select at least 3 gym branches');
+      }
       return;
     }
 
@@ -213,13 +206,8 @@ export class BuddyPreferencesComponent implements OnInit {
 
     const data = {
       userId: user.id,
-      trainingGoal: this.form.value.trainingGoal!,
-      gender: this.form.value.gender!,
       preferredLocations: this.form.value.preferredLocations!,
-      dailySchedule: this.form.value.dailySchedule!,
-      socialBehavior: this.form.value.socialBehavior!,
-      ageRange: this.form.value.ageRange!,
-      telegramUsername: this.form.value.telegramUsername!
+      dailySchedule: this.form.value.dailySchedule!
     };
 
     this.buddyService.saveBuddyPreferences(data).subscribe({

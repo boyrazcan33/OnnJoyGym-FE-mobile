@@ -1,12 +1,7 @@
 export interface BuddyMatchRequest {
   userId: number;
-  trainingGoal: string;
-  gender: string;
   preferredLocations: number[];
   dailySchedule: string[];
-  socialBehavior: string;
-  ageRange: string;
-  telegramUsername: string;
 }
 
 export interface BuddyMatchResponse {

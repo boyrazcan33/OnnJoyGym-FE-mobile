@@ -852,11 +852,10 @@ export class BuddySearchComponent implements OnInit {
 
   formatTimeSlot(slot: string): string {
     const slots: Record<string, string> = {
-      'EARLY_MORNING': 'Early Morning (5-8 AM)',
-      'MORNING': 'Morning (8-12 PM)',
-      'AFTERNOON': 'Afternoon (12-5 PM)',
-      'EVENING': 'Evening (5-9 PM)',
-      'NIGHT': 'Night (9 PM-12 AM)'
+      'MORNING': 'Morning (6 AM – 12 PM)',
+      'AFTERNOON': 'Afternoon (12 PM – 6 PM)',
+      'EVENING': 'Evening (6 PM – 12 AM)',
+      'NIGHT': 'Night (12 AM – 6 AM)'
     };
     return slots[slot] || slot;
   }
